@@ -70,6 +70,18 @@ Open the cheat console with `Ctrl+Shift+C`, type a command, press Enter.
 | `claude.challenge_easy` | Easy challenge |
 | `claude.challenge_hard` | Hard challenge with strict rules |
 
+### Protagonist
+| Command | What it does |
+|---|---|
+| `claude.set_main Lily Feng` | Set Lily Feng as your protagonist sim |
+| `claude.main` | Show your current protagonist and their relationship network |
+
+Setting a protagonist focuses all story, event, and chat prompts on that sim and the sims they have relationships with — rather than every sim in the save file. This keeps the AI grounded in the story you're actually playing.
+
+You can also set the protagonist in `claude_config.cfg` with `main_sim_name = Lily Feng`. The in-game command saves to `ClaudeAI_Settings.json` and persists across sessions.
+
+If no protagonist is set, the mod falls back to your currently active sim.
+
 ### General
 | Command | What it does |
 |---|---|
@@ -118,6 +130,7 @@ claude.auto_events off
 | `fast_model` | `claude-haiku-4-5` | Model for dialogue, events, goals |
 | `max_tokens` | `512` | Max length of responses |
 | `language` | `English` | Language for all generated content |
+| `main_sim_name` | *(blank)* | Protagonist sim (FirstName LastName). Falls back to active sim. |
 | `auto_events_enabled` | `false` | Turn on random auto-events |
 | `auto_event_interval_minutes` | `20` | Real-world minutes between checks |
 | `auto_event_chance` | `40` | Percent chance each check fires |

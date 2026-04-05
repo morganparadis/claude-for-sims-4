@@ -1,12 +1,18 @@
 """
 Configuration loader for Claude AI mod.
 Reads from claude_config.cfg in the Mods folder.
+
+Runtime settings (set via in-game commands) are stored separately in
+ClaudeAI_Settings.json alongside the config file so that the config
+file stays clean and user-edited. Settings in the JSON override config.
 """
+import json
 import os
 import configparser
 
 _config = None
 _CONFIG_FILENAME = "claude_config.cfg"
+_SETTINGS_FILENAME = "ClaudeAI_Settings.json"
 
 
 def _find_config_file():
@@ -23,6 +29,48 @@ def _find_config_file():
         if os.path.isfile(path):
             return os.path.abspath(path)
     return None
+
+
+def _settings_path():
+    cfg = _find_config_file()
+    if cfg:
+        return os.path.join(os.path.dirname(cfg), _SETTINGS_FILENAME)
+    return None
+
+
+def _load_settings():
+    path = _settings_path()
+    if path and os.path.exists(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def _save_settings(data):
+    path = _settings_path()
+    if not path:
+        return False
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception:
+        return False
+
+
+def get_setting(key, fallback=None):
+    """Read a runtime setting (set by in-game command). Falls back to config file."""
+    return _load_settings().get(key, fallback)
+
+
+def set_setting(key, value):
+    """Persist a runtime setting to ClaudeAI_Settings.json."""
+    data = _load_settings()
+    data[key] = value
+    return _save_settings(data)
 
 
 def get_config():
@@ -64,3 +112,20 @@ def get_language():
 def is_configured():
     key = get_api_key()
     return bool(key and key != "YOUR_API_KEY_HERE")
+
+
+def get_main_sim_name():
+    """
+    Return the protagonist sim's full name, or empty string if not set.
+    Checks ClaudeAI_Settings.json first (set via claude.set_main command),
+    then falls back to main_sim_name in claude_config.cfg.
+    """
+    runtime = get_setting("main_sim_name", "")
+    if runtime:
+        return runtime.strip()
+    return get_config().get("claude_ai", "main_sim_name", fallback="").strip()
+
+
+def set_main_sim_name(name):
+    """Persist the protagonist sim name for future sessions."""
+    return set_setting("main_sim_name", name.strip())

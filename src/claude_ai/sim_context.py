@@ -43,6 +43,9 @@ _PACK_MAP = {
 # Cache so we only scan once per session
 _installed_packs_cache = None
 
+# Cache main sim lookup so we don't search the sim manager on every prompt
+_main_sim_cache = None   # (name_key, sim_info) tuple
+
 
 def get_installed_packs():
     """
@@ -68,6 +71,145 @@ def get_installed_packs():
 
     _installed_packs_cache = installed
     return installed
+
+
+def get_main_sim_info():
+    """
+    Find and return the sim_info for the designated protagonist, or None.
+    Caches the result so we don't search the full sim manager on every prompt.
+    Re-searches if the configured name changes.
+    """
+    global _main_sim_cache
+    from . import config as _config
+
+    name = _config.get_main_sim_name()
+    if not name:
+        return None
+
+    # Return cached result if the name hasn't changed and sim is still valid
+    if _main_sim_cache is not None:
+        cached_name, cached_si = _main_sim_cache
+        if cached_name == name:
+            try:
+                import services
+                if services.sim_info_manager().get(cached_si.sim_id) is not None:
+                    return cached_si
+            except Exception:
+                pass
+
+    # Search the sim manager by name — only runs when cache is cold or stale
+    parts = name.strip().split(None, 1)
+    first = parts[0].lower()
+    last = parts[1].lower() if len(parts) > 1 else ""
+
+    try:
+        import services
+        for si in services.sim_info_manager().values():
+            if si.first_name.lower() != first:
+                continue
+            if last and si.last_name.lower() != last:
+                continue
+            _main_sim_cache = (name, si)
+            return si
+    except Exception:
+        pass
+
+    return None
+
+
+def get_main_sim_network(main_si, min_friendship=25):
+    """
+    Return relationship info for sims your main sim actually knows.
+    Scoped to their relationship_tracker — never scans all sims in the save.
+
+    Only includes sims with meaningful relationship bits (Friend, Enemy,
+    Romantic partner, family, etc.) or a friendship score above min_friendship.
+    Household members are returned separately so they can be labelled clearly.
+    """
+    household_ids = set()
+    try:
+        import services
+        hh = services.active_household()
+        if hh:
+            household_ids = {si.sim_id for si in hh.sim_info_gen()}
+    except Exception:
+        pass
+
+    household_members = []
+    relationships = []
+
+    try:
+        import services
+        sm = services.sim_info_manager()
+        my_id = main_si.sim_id
+
+        _MEANINGFUL_BITS = (
+            "Friend", "Enemy", "Romantic", "Married", "Engaged",
+            "Divorced", "BFF", "Crush", "Partner", "Hate",
+            "FamilyRelationship", "Despise",
+        )
+
+        for rel in main_si.relationship_tracker.relationships.values():
+            try:
+                other_id = rel.sim_id_b if rel.sim_id_a == my_id else rel.sim_id_a
+                other_si = sm.get(other_id)
+                if not other_si:
+                    continue
+
+                # Relationship bit labels
+                bit_labels = []
+                try:
+                    for bit in rel.relationship_bit_tracker.relationship_bits:
+                        bn = bit.__name__
+                        if any(kw in bn for kw in _MEANINGFUL_BITS):
+                            label = (bn.replace("RelationshipBit_", "")
+                                       .replace("Romantic_", "")
+                                       .replace("_", " ").strip())
+                            bit_labels.append(label)
+                except Exception:
+                    pass
+
+                # Friendship / romance scores
+                friendship, romance = 0, None
+                try:
+                    for track in rel._relationship_tracks.values():
+                        tn = track.__class__.__name__.lower()
+                        val = int(track.get_value())
+                        if "romance" in tn:
+                            romance = val
+                        elif "friend" in tn or "acquaint" in tn:
+                            friendship = val
+                except Exception:
+                    pass
+
+                # Skip sims we have no meaningful connection to
+                if not bit_labels and abs(friendship) < min_friendship:
+                    continue
+
+                entry = {
+                    "sim_info": other_si,
+                    "name": f"{other_si.first_name} {other_si.last_name}".strip(),
+                    "status": ", ".join(bit_labels[:3]),
+                    "friendship": friendship,
+                    "romance": romance,
+                    "in_household": other_id in household_ids,
+                }
+
+                if other_id in household_ids:
+                    household_members.append(entry)
+                else:
+                    relationships.append(entry)
+
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    # Sort: household members by name, relationships by friendship score desc
+    household_members.sort(key=lambda x: x["name"])
+    relationships.sort(key=lambda x: -(abs(x["friendship"] or 0)))
+
+    return household_members, relationships
 
 
 def _safe(obj, attr, default=None):
@@ -334,61 +476,125 @@ def get_current_lot_name():
     return None
 
 
+def _format_rel_entry(r):
+    """Format a single relationship entry from get_main_sim_network() for a prompt."""
+    line = f"    - {r['name']}"
+    if r.get("status"):
+        line += f" ({r['status']})"
+    if r.get("friendship") is not None:
+        line += f" [friendship: {r['friendship']}]"
+    if r.get("romance") is not None:
+        line += f" [romance: {r['romance']}]"
+    return line
+
+
 def build_context_string(sim=None):
     """
     Build a human-readable context string to include in prompts.
-    Includes active sim info and household overview.
+
+    If a main sim (protagonist) is configured, centres the context on them:
+      - Their full sim info (traits, mood, skills, career, aspiration)
+      - Their household members
+      - Their relationship network (sims they actually know, not all sims in the save)
+
+    Falls back to active sim + household if no main sim is set.
+    The explicit `sim` argument overrides everything (used for dialogue on a specific sim).
     """
     lines = []
 
-    target_sim = sim or get_active_sim()
-    if target_sim:
-        info = get_sim_info_dict(target_sim)
-        lines.append(f"Active Sim: {info['name']}")
-        if info.get("age"):
-            lines.append(f"  Age: {info['age']}")
-        if info.get("gender"):
-            lines.append(f"  Gender: {info['gender']}")
-        lines.append(f"  Mood: {info.get('mood', 'Unknown')}")
-        if info.get("traits"):
-            lines.append(f"  Traits: {', '.join(info['traits'])}")
-        if info.get("career"):
-            lines.append(f"  Career: {info['career']}")
-        if info.get("aspiration"):
-            lines.append(f"  Aspiration: {info['aspiration']}")
-        if info.get("skills"):
-            skill_str = ", ".join(f"{k} {v}" for k, v in info["skills"].items())
-            lines.append(f"  Skills: {skill_str}")
-        if info.get("relationships"):
-            lines.append("  Relationships:")
-            for r in info["relationships"]:
-                rel_line = f"    - {r['name']}"
-                if r.get("status"):
-                    rel_line += f" ({r['status']})"
-                if r.get("friendship") is not None:
-                    rel_line += f" [friendship: {r['friendship']}]"
-                if r.get("romance") is not None:
-                    rel_line += f" [romance: {r['romance']}]"
-                lines.append(rel_line)
+    # --- Determine which sim to centre on ---
+    if sim:
+        # Caller explicitly passed a sim (e.g. dialogue for a specific NPC)
+        focus_si = sim.sim_info if hasattr(sim, "sim_info") else None
+        use_main_network = False
+    else:
+        main_si = get_main_sim_info()
+        if main_si:
+            focus_si = main_si
+            use_main_network = True
+        else:
+            # No main sim configured — fall back to active sim
+            active = get_active_sim()
+            focus_si = active.sim_info if active else None
+            use_main_network = False
+
+    # --- Protagonist / focus sim block ---
+    if focus_si:
+        is_main = use_main_network
+        label = "Protagonist" if is_main else "Active Sim"
+        name = f"{focus_si.first_name} {focus_si.last_name}".strip()
+        lines.append(f"{label}: {name}")
+        lines.append(f"  Age: {str(_safe(focus_si, 'age', '')).replace('Age.', '')}")
+        lines.append(f"  Mood: {get_sim_mood(focus_si)}")
+
+        traits = get_sim_traits(focus_si)
+        if traits:
+            lines.append(f"  Traits: {', '.join(traits)}")
+
+        career = get_sim_career(focus_si)
+        if career:
+            lines.append(f"  Career: {career}")
+
+        asp = get_sim_aspiration(focus_si)
+        if asp:
+            lines.append(f"  Aspiration: {asp}")
+
+        skills = get_sim_skills(focus_si)
+        if skills:
+            lines.append(f"  Skills: {', '.join(f'{k} {v}' for k, v in skills.items())}")
+
+        # --- Household + relationship network (main sim path) ---
+        if use_main_network:
+            household_members, relationships = get_main_sim_network(focus_si)
+
+            if household_members:
+                lines.append("\nHousehold:")
+                for m in household_members:
+                    msi = m["sim_info"]
+                    m_mood = get_sim_mood(msi)
+                    m_traits = get_sim_traits(msi, limit=3)
+                    m_line = f"  - {m['name']} ({str(_safe(msi, 'age', '')).replace('Age.', '')}, {m_mood} mood)"
+                    if m_traits:
+                        m_line += f", traits: {', '.join(m_traits)}"
+                    if m.get("status"):
+                        m_line += f" [{m['status']}]"
+                    lines.append(m_line)
+
+            try:
+                import services
+                hh = services.active_household()
+                if hh:
+                    funds = str(_safe(hh.funds, "money", "?"))
+                    lines.append(f"  Household funds: §{funds}")
+            except Exception:
+                pass
+
+            if relationships:
+                lines.append(f"\n{name}'s Relationships (outside household):")
+                for r in relationships:
+                    lines.append(_format_rel_entry(r))
+
+        else:
+            # Fallback path: show household the old way, no relationship network
+            household = get_household_context()
+            if household:
+                lines.append(f"\nHousehold: {household.get('household_name', 'Unknown')}")
+                lines.append(f"  Funds: §{household.get('funds', '?')}")
+                for m in household.get("members", []):
+                    m_line = f"  - {m['name']} ({m.get('age', '?')}, {m.get('mood', '?')} mood)"
+                    if m.get("traits"):
+                        m_line += f", traits: {', '.join(m['traits'])}"
+                    lines.append(m_line)
+
+            rels = get_sim_relationships(focus_si)
+            if rels:
+                lines.append("  Relationships:")
+                for r in rels:
+                    lines.append(_format_rel_entry(r))
 
     lot = get_current_lot_name()
     if lot:
-        lines.append(f"Current Location: {lot}")
-
-    household = get_household_context()
-    if household:
-        lines.append(f"\nHousehold: {household.get('household_name', 'Unknown')}")
-        lines.append(f"  Funds: §{household.get('funds', '?')}")
-        members = household.get("members", [])
-        if members:
-            lines.append("  Members:")
-            for m in members:
-                member_line = f"    - {m['name']} ({m.get('age', '?')}, {m.get('mood', '?')} mood)"
-                if m.get("traits"):
-                    member_line += f", traits: {', '.join(m['traits'])}"
-                if m.get("career"):
-                    member_line += f", career: {m['career']}"
-                lines.append(member_line)
+        lines.append(f"\nCurrent Location: {lot}")
 
     packs = get_installed_packs()
     if packs:

@@ -16,29 +16,22 @@ Brings AI-generated dialogue, storylines, random events, and challenges to your 
 
 ## How does Claude know about your Sims?
 
-Every time you run a command, the mod reads live data from the game and sends it to Claude as context. Claude doesn't remember previous sessions — it reads fresh each time.
+Every time you run a command, the mod reads live data from the game and sends it to Claude as context.
 
 **What it reads:**
 | Data | Example |
 |---|---|
-| Active sim's name | Lily Feng |
-| Age stage | Young Adult |
-| Current mood | Confident |
+| Protagonist sim's name, age, mood | Lily Feng, Young Adult, Confident |
 | Traits (up to 6) | Bookworm, Ambitious, Loner |
-| Career | Doctor |
-| Aspiration | Renaissance Sim |
-| Household name | The Feng Household |
-| All household members | names, ages, moods, traits |
-| Household funds | §42,800 |
-| Current lot name | Oakenstead |
+| Career and aspiration | Doctor, Renaissance Sim |
+| Skill levels | Cooking 7, Programming 4, Fitness 2 |
+| Household name, members, funds | The Feng Household, §42,800 |
+| Current lot | Oakenstead |
+| Relationship network | names, relationship types, friendship scores |
+| Installed packs | used to keep suggestions relevant to what you own |
+| Recent journal history | past events, storylines, and chats from previous sessions |
 
-**What it does NOT know:**
-- Relationship levels or friendship history
-- Skill levels or career progress
-- What happened in previous play sessions
-- Events you haven't told it about
-
-You can fill in gaps using `claude.chat`: for example, `claude.chat my sim just got fired and her husband doesn't know yet` gives Claude that context for richer responses.
+The journal is what gives Claude memory across sessions — generated events, stories, and chat responses are automatically saved and included in future prompts so the AI can reference what happened before.
 
 ---
 

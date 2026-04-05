@@ -3,6 +3,72 @@ Collects information about the current game state to give Claude rich context.
 All Sims 4 API calls are wrapped in try/except to handle version differences gracefully.
 """
 
+# Mapping from sims4.common.Pack enum attribute name → friendly pack name.
+# Each entry is tried individually so unknown/future packs don't crash anything.
+_PACK_MAP = {
+    # Expansion Packs
+    "EP01": "Get to Work",
+    "EP02": "Get Together",
+    "EP03": "City Living",
+    "EP04": "Cats & Dogs",
+    "EP05": "Seasons",
+    "EP06": "Get Famous",
+    "EP07": "Island Living",
+    "EP08": "Discover University",
+    "EP09": "Eco Lifestyle",
+    "EP10": "Snowy Escape",
+    "EP11": "Cottage Living",
+    "EP12": "High School Years",
+    "EP13": "Growing Together",
+    "EP14": "Horse Ranch",
+    "EP15": "For Rent",
+    "EP16": "Life & Death",
+    # Game Packs
+    "GP01": "Outdoor Retreat",
+    "GP02": "Spa Day",
+    "GP03": "Dine Out",
+    "GP04": "Vampires",
+    "GP05": "Parenthood",
+    "GP06": "Jungle Adventure",
+    "GP07": "StrangerVille",
+    "GP08": "Realm of Magic",
+    "GP09": "Star Wars: Journey to Batuu",
+    "GP10": "Dream Home Decorator",
+    "GP11": "My Wedding Stories",
+    "GP12": "Werewolves",
+    "GP13": "Lovestruck",
+    "GP14": "Businesses & Hobbies",
+}
+
+# Cache so we only scan once per session
+_installed_packs_cache = None
+
+
+def get_installed_packs():
+    """
+    Return a list of friendly pack names the player has installed.
+    Results are cached after the first call.
+    """
+    global _installed_packs_cache
+    if _installed_packs_cache is not None:
+        return _installed_packs_cache
+
+    installed = []
+    try:
+        import sims4.common
+        for attr, name in _PACK_MAP.items():
+            try:
+                pack = getattr(sims4.common.Pack, attr, None)
+                if pack is not None and sims4.common.is_available_pack(pack):
+                    installed.append(name)
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    _installed_packs_cache = installed
+    return installed
+
 
 def _safe(obj, attr, default=None):
     try:
@@ -197,5 +263,11 @@ def build_context_string(sim=None):
                 if m.get("career"):
                     member_line += f", career: {m['career']}"
                 lines.append(member_line)
+
+    packs = get_installed_packs()
+    if packs:
+        lines.append(f"\nInstalled Packs: {', '.join(packs)}")
+    else:
+        lines.append("\nInstalled Packs: base game only (or could not detect)")
 
     return "\n".join(lines) if lines else "No game context available (not in an active save)."

@@ -119,6 +119,115 @@ def get_sim_mood(sim_info):
     return "Neutral"
 
 
+def get_sim_skills(sim_info, min_level=1, limit=12):
+    """
+    Return a dict of {skill_name: level} for skills the sim has learned.
+    Only includes skills at or above min_level. Sorted highest first.
+    """
+    skills = {}
+    try:
+        tracker = sim_info.skill_tracker
+        if not tracker:
+            return skills
+        for stat_inst in tracker._statistics.values():
+            try:
+                level = int(stat_inst.get_value())
+                if level < min_level:
+                    continue
+                name = stat_inst.__class__.__name__
+                cleaned = (name
+                    .replace("Skill_Adult_", "")
+                    .replace("Skill_Child_", "")
+                    .replace("Skill_Toddler_", "")
+                    .replace("Skill_Teen_", "")
+                    .replace("Skill_", "")
+                    .replace("_", " ")
+                    .title())
+                skills[cleaned] = level
+            except Exception:
+                continue
+    except Exception:
+        pass
+    # Sort by level descending, take top N
+    sorted_skills = dict(sorted(skills.items(), key=lambda x: -x[1])[:limit])
+    return sorted_skills
+
+
+def get_sim_relationships(sim_info, limit=8):
+    """
+    Return a list of relationship dicts for this sim's notable relationships.
+    Each dict has: name, status (relationship bit labels), and optionally scores.
+    """
+    relationships = []
+    try:
+        import services
+        rel_tracker = sim_info.relationship_tracker
+        sim_manager = services.sim_info_manager()
+        my_id = sim_info.sim_id
+
+        for rel in rel_tracker.relationships.values():
+            try:
+                other_id = rel.sim_id_b if rel.sim_id_a == my_id else rel.sim_id_a
+                other_si = sim_manager.get(other_id)
+                if not other_si:
+                    continue
+
+                name = f"{other_si.first_name} {other_si.last_name}".strip()
+
+                # Relationship bit labels (Friend, Enemy, Married, etc.)
+                bit_labels = []
+                try:
+                    for bit in rel.relationship_bit_tracker.relationship_bits:
+                        bit_name = bit.__name__
+                        _visible_keywords = (
+                            "Friend", "Enemy", "Romantic", "Married", "Divorced",
+                            "BFF", "Acquaintance", "Hate", "Despise", "Crush",
+                            "Partner", "Engaged", "FamilyRelationship",
+                        )
+                        if any(kw in bit_name for kw in _visible_keywords):
+                            label = (bit_name
+                                .replace("RelationshipBit_", "")
+                                .replace("Romantic_", "")
+                                .replace("_", " ")
+                                .strip())
+                            bit_labels.append(label)
+                except Exception:
+                    pass
+
+                # Try to get numeric friendship/romance scores
+                friendship = None
+                romance = None
+                try:
+                    for track_stat in rel._relationship_tracks.values():
+                        track_name = track_stat.__class__.__name__.lower()
+                        val = int(track_stat.get_value())
+                        if "romance" in track_name:
+                            romance = val
+                        elif "friend" in track_name or "acquaint" in track_name:
+                            friendship = val
+                except Exception:
+                    pass
+
+                entry = {"name": name}
+                if bit_labels:
+                    entry["status"] = ", ".join(bit_labels[:3])
+                if friendship is not None:
+                    entry["friendship"] = friendship
+                if romance is not None and romance != 0:
+                    entry["romance"] = romance
+
+                # Only include relationships with some substance
+                if bit_labels or (friendship is not None and abs(friendship) > 10):
+                    relationships.append(entry)
+                    if len(relationships) >= limit:
+                        break
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return relationships
+
+
 def get_sim_career(sim_info):
     """Return the sim's career name if employed."""
     try:
@@ -162,6 +271,9 @@ def get_sim_info_dict(sim):
         aspiration = get_sim_aspiration(si)
         if aspiration:
             info["aspiration"] = aspiration
+
+        info["skills"] = get_sim_skills(si)
+        info["relationships"] = get_sim_relationships(si)
 
     except Exception:
         pass
@@ -244,6 +356,20 @@ def build_context_string(sim=None):
             lines.append(f"  Career: {info['career']}")
         if info.get("aspiration"):
             lines.append(f"  Aspiration: {info['aspiration']}")
+        if info.get("skills"):
+            skill_str = ", ".join(f"{k} {v}" for k, v in info["skills"].items())
+            lines.append(f"  Skills: {skill_str}")
+        if info.get("relationships"):
+            lines.append("  Relationships:")
+            for r in info["relationships"]:
+                rel_line = f"    - {r['name']}"
+                if r.get("status"):
+                    rel_line += f" ({r['status']})"
+                if r.get("friendship") is not None:
+                    rel_line += f" [friendship: {r['friendship']}]"
+                if r.get("romance") is not None:
+                    rel_line += f" [romance: {r['romance']}]"
+                lines.append(rel_line)
 
     lot = get_current_lot_name()
     if lot:
@@ -271,3 +397,17 @@ def build_context_string(sim=None):
         lines.append("\nInstalled Packs: base game only (or could not detect)")
 
     return "\n".join(lines) if lines else "No game context available (not in an active save)."
+
+
+def build_context_string_with_journal(sim=None):
+    """
+    Full context string including recent journal history.
+    Use this for story, event, and chat prompts where past events matter.
+    Skip it for quick dialogue prompts where latency is more important.
+    """
+    from . import journal  # local import to avoid circular dependency
+    ctx = build_context_string(sim=sim)
+    history = journal.format_for_prompt()
+    if history:
+        return f"{ctx}\n\n{history}"
+    return ctx

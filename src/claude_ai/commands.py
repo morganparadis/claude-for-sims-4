@@ -23,7 +23,7 @@ COMMANDS:
 
 try:
     import sims4.commands
-    from . import config, sim_context, dialogue, storyteller, event_generator, notifications, api_client, auto_events
+    from . import config, sim_context, dialogue, storyteller, event_generator, notifications, api_client, auto_events, journal
 
     # -------------------------------------------------------------------------
     # Helpers
@@ -62,6 +62,7 @@ try:
             output("[Claude AI] ✗ NOT configured — edit claude_config.cfg and add your API key")
 
         output(f"[Claude AI] {auto_events.status()}")
+        output(f"[Claude AI] Journal: {journal.get_entry_count()} entries saved")
         output("")
         output("[Claude AI] Available commands:")
         output("  claude.dialogue             — active sim's dialogue")
@@ -263,12 +264,35 @@ try:
         )
         prompt = f"Current game state:\n{context}\n\nPlayer: {message}"
 
-        output(f"[Claude AI] Thinking…")
+        output("[Claude AI] Thinking…")
+
+        def on_chat_result(text, error):
+            if text:
+                journal.add_entry("chat", f"Q: {message}\nA: {text}")
+            _on_result("Claude AI", output)(text, error)
+
         api_client.call_claude_async(
             [{"role": "user", "content": prompt}],
             system=system,
-            callback=_on_result("Claude AI", output),
+            callback=on_chat_result,
         )
+
+    # -------------------------------------------------------------------------
+    # Journal
+    # -------------------------------------------------------------------------
+
+    @sims4.commands.Command("claude.journal", command_type=sims4.commands.CommandType.Live)
+    def cmd_journal(_connection=None):
+        output = sims4.commands.CheatOutput(_connection)
+        text = journal.format_recent_for_display(n=10)
+        output(text)
+
+    @sims4.commands.Command("claude.journal_clear", command_type=sims4.commands.CommandType.Live)
+    def cmd_journal_clear(_connection=None):
+        output = sims4.commands.CheatOutput(_connection)
+        count = journal.get_entry_count()
+        journal.clear()
+        output(f"[Claude AI] Journal cleared ({count} entries deleted).")
 
 except ImportError:
     # Running outside the Sims 4 game environment (e.g., during development)

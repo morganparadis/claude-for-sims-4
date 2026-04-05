@@ -2,7 +2,7 @@
 Event & challenge generator — creates surprising in-game events and gameplay challenges.
 Uses the fast model for quick response times.
 """
-from . import api_client, sim_context, config
+from . import api_client, sim_context, config, journal
 
 _SYSTEM = """You are a mischievous game master for The Sims 4. You create fun, surprising events \
 and challenges that shake up the player's game.
@@ -43,13 +43,15 @@ def generate_random_event(callback=None):
     """
     Generate a single surprise event to shake up the current play session.
     """
-    context = _get_context_block()
+    context = sim_context.build_context_string_with_journal()
     language = config.get_language()
     system = _SYSTEM.format(language=language)
 
     prompt = (
         f"{context}\n\n"
-        "Generate ONE surprising random event for this household right now.\n\n"
+        "Generate ONE surprising random event for this household right now. "
+        "If there is journal history above, make this event feel connected to past events "
+        "rather than completely out of nowhere.\n\n"
         "Format exactly as:\n"
         "EVENT: [Catchy name]\n"
         "WHAT HAPPENED: [2–3 sentences describing the event]\n"
@@ -61,11 +63,17 @@ def generate_random_event(callback=None):
         "neighborhood feud, surprise party, hidden talent discovered, old flame returns"
     )
 
+    def _callback_with_journal(text, error):
+        if text:
+            journal.add_entry("event", text)
+        if callback:
+            callback(text, error)
+
     return api_client.call_claude_async(
         [{"role": "user", "content": prompt}],
         system=system,
         use_fast_model=True,
-        callback=callback,
+        callback=_callback_with_journal,
     )
 
 

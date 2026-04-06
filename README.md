@@ -1,16 +1,17 @@
 # Claude AI for The Sims 4
 
-Brings AI-generated dialogue, storylines, random events, and challenges to your game using the Claude API.
+Brings AI-generated dialogue, storylines, random events, phone calls, and challenges to your game using the Claude API. Results show as in-game notification popups and phone dialogs — not just the cheat console.
 
 ---
 
 ## Installation
 
-1. Run `python build.py` from this folder — it builds the mod and copies it to your Mods folder automatically.
-2. Open `claude_config.cfg` in your Mods folder and replace `YOUR_API_KEY_HERE` with your API key.
+1. You'll need [Python 3.7](https://www.python.org/ftp/python/3.7.9/python-3.7.9-embed-amd64.zip) for compilation. Extract it to `tools/python37/` in this project folder.
+2. Run `python build.py` — it compiles the mod to `.pyc` and copies it to your Mods folder automatically.
+3. Open `claude_config.cfg` in your Mods folder and replace `YOUR_API_KEY_HERE` with your API key.
    - Get a key at [console.anthropic.com](https://console.anthropic.com/) (free to sign up, pay per use)
-3. In The Sims 4: **Game Options → Other → enable Custom Content and Script Mods**, then restart.
-4. Open the cheat console (`Ctrl+Shift+C`) and type `claude.status` to confirm it's working.
+4. In The Sims 4: **Game Options > Other > enable Custom Content and Script Mods**, then restart.
+5. You'll see a notification popup when the mod loads. Type `claude.status` in the cheat console to see all commands.
 
 ---
 
@@ -31,7 +32,7 @@ Every time you run a command, the mod reads live data from the game and sends it
 | Installed packs | used to keep suggestions relevant to what you own |
 | Recent journal history | past events, storylines, and chats from previous sessions |
 
-The journal is what gives Claude memory across sessions — generated events, stories, and chat responses are automatically saved and included in future prompts so the AI can reference what happened before.
+The journal gives Claude memory across sessions — generated events, stories, and chat responses are saved automatically and included in future prompts so the AI can reference what happened before.
 
 ---
 
@@ -42,14 +43,14 @@ Open the cheat console with `Ctrl+Shift+C`, type a command, press Enter.
 ### Dialogue
 | Command | What it does |
 |---|---|
-| `claude.dialogue` | 4–5 in-character lines for your active sim |
+| `claude.dialogue` | 4-5 in-character lines for your active sim |
 | `claude.dialogue_situation just got promoted` | Dialogue for a specific situation |
 | `claude.backstory` | A backstory and personality reveal for the active sim |
 
 ### Storytelling
 | Command | What it does |
 |---|---|
-| `claude.story` | 2–3 paragraph narrative update for the household |
+| `claude.story` | 2-3 paragraph narrative update for the household |
 | `claude.storyline` | Full 3-act storyline with gameplay goals |
 | `claude.storyline_theme romance` | Storyline with a specific theme (try: rivalry, mystery, rags to riches, family drama, haunting) |
 | `claude.drama` | Relationship drama arc between two household members |
@@ -63,13 +64,13 @@ Open the cheat console with `Ctrl+Shift+C`, type a command, press Enter.
 | `claude.challenge_easy` | Easy challenge |
 | `claude.challenge_hard` | Hard challenge with strict rules |
 
-### Phone
+### Phone Calls & Texts
 | Command | What it does |
 |---|---|
-| `claude.call` | Incoming phone call from a sim you have a relationship with |
-| `claude.text` | Text message from a relationship sim |
+| `claude.call` | Incoming phone call from a relationship sim (ring sound, caller portrait) |
+| `claude.text` | Text message from a relationship sim (buzz sound, sender portrait) |
 
-Calls and texts are pulled from your protagonist's relationship network. The content is shaped by the sender's personality, mood, and how they feel about your sim. They're also saved to the journal, so future stories can reference them.
+Calls and texts show as in-game phone dialogs with the sim's portrait, just like the game's built-in phone system. They're pulled from your protagonist's relationship network (non-household sims only), shaped by the sender's personality and relationship to your sim, and saved to the journal so future stories can reference them.
 
 ### Protagonist
 | Command | What it does |
@@ -87,10 +88,12 @@ If no protagonist is set, the mod falls back to your currently active sim.
 | Command | What it does |
 |---|---|
 | `claude.chat <message>` | Freeform — ask anything about your game |
+| `claude.journal` | View recent journal entries |
 | `claude.auto_events on` | Turn on random auto-events for this session |
 | `claude.auto_events off` | Turn them off |
 | `claude.status` | Show config, auto-event status, and all commands |
 | `claude.reload` | Reload config file (after editing claude_config.cfg) |
+| `claude.debug` | Show game API debug info (for troubleshooting) |
 
 ---
 
@@ -101,6 +104,7 @@ Auto-events fire randomly while you play without you having to ask. They use **r
 **How it works:**
 - Every N real-world minutes, the mod rolls a random check
 - If the roll succeeds (based on your configured chance %), it generates a random piece of content
+- Content shows as a notification popup, or as a phone dialog for calls/texts
 - It only fires when you're in an active household (not during loading screens, CAS, or build mode)
 - Silent failures — if there's a network error, nothing happens, no interruption
 
@@ -109,8 +113,10 @@ Auto-events fire randomly while you play without you having to ask. They use **r
 auto_events_enabled = true
 auto_event_interval_minutes = 20   ; check every 20 real minutes
 auto_event_chance = 40             ; 40% chance each check fires something
-auto_event_types = event, goals    ; what can fire: event, goals, story, drama
+auto_event_types = event, goals, call, text   ; what can fire
 ```
+
+Available auto-event types: `event`, `goals`, `story`, `drama`, `call`, `text`
 
 With the defaults (20 min interval, 40% chance), you get something roughly every 50 real minutes on average.
 
@@ -128,14 +134,14 @@ claude.auto_events off
 |---|---|---|
 | `api_key` | *(required)* | Your Anthropic API key |
 | `default_model` | `claude-opus-4-6` | Model for stories and storylines |
-| `fast_model` | `claude-haiku-4-5` | Model for dialogue, events, goals |
+| `fast_model` | `claude-haiku-4-5` | Model for dialogue, events, calls, texts |
 | `max_tokens` | `512` | Max length of responses |
 | `language` | `English` | Language for all generated content |
 | `main_sim_name` | *(blank)* | Protagonist sim (FirstName LastName). Falls back to active sim. |
 | `auto_events_enabled` | `false` | Turn on random auto-events |
 | `auto_event_interval_minutes` | `20` | Real-world minutes between checks |
 | `auto_event_chance` | `40` | Percent chance each check fires |
-| `auto_event_types` | `event, goals` | Content types for auto-events |
+| `auto_event_types` | `event, goals, call, text` | Content types for auto-events |
 
 After editing the config, type `claude.reload` in-game to apply changes without restarting.
 
@@ -147,30 +153,42 @@ Everything is very cheap. Rough estimates per command:
 
 | Type | Model | Estimated cost |
 |---|---|---|
-| Dialogue, events, goals | Haiku | ~$0.001 |
-| Story, storyline, drama | Opus | ~$0.01–0.02 |
-| Chat | Opus | ~$0.005–0.01 |
+| Dialogue, events, goals, calls, texts | Haiku | ~$0.001 |
+| Story, storyline, drama | Opus | ~$0.01-0.02 |
+| Chat | Opus | ~$0.005-0.01 |
 
-A heavy play session with 30+ commands + auto-events would cost around $0.20–0.50.
+A heavy play session with 30+ commands + auto-events would cost around $0.20-0.50.
 
 **To reduce cost further**, set `default_model = claude-haiku-4-5` in the config. The quality drops a bit for long-form stories but is still good for events and dialogue.
 
 ---
 
+## Technical Notes
+
+- **Requires Python 3.7** for compilation — The Sims 4 only loads compiled `.pyc` bytecode, not `.py` source files
+- **Uses curl for API calls** — The game's embedded Python lacks SSL support, so HTTP calls go through `curl` (built into Windows 10+)
+- **All API calls run on background threads** to prevent game freezes
+- **Notifications use the same pattern as MC Command Center** for compatibility
+- **No pip packages required** — everything uses Python stdlib + game APIs
+
 ## Development
 
-The source is in `src/claude_ai/`. After making changes, run `python build.py` to rebuild and reinstall.
+The source is in `src/claude_ai/`. After making changes, run `python build.py` to compile and reinstall.
 
 ```
-src/claude_ai/
-  __init__.py        mod entry point, starts auto-events
-  config.py          reads claude_config.cfg
-  api_client.py      HTTP calls to Claude API (urllib, background thread)
-  sim_context.py     reads sim data from the game
-  dialogue.py        dialogue, conversation, backstory generation
-  storyteller.py     story updates, storylines, relationship drama
-  event_generator.py random events, challenges, weekly goals
-  auto_events.py     background thread for random auto-events
-  notifications.py   in-game popup + cheat console output
-  commands.py        all claude.* cheat commands
+src/
+  claude_ai_loader.py  root-level entry point (game needs this)
+  claude_ai/
+    __init__.py        mod entry point, startup notification, auto-events
+    config.py          reads claude_config.cfg from Mods folder
+    api_client.py      Claude API calls via curl subprocess
+    sim_context.py     reads sim data, protagonist system, relationship network
+    dialogue.py        dialogue, conversation, backstory generation
+    storyteller.py     story updates, storylines, relationship drama
+    event_generator.py random events, challenges, weekly goals
+    phone.py           AI-generated calls and texts from relationship sims
+    auto_events.py     background thread for random auto-events
+    notifications.py   in-game notification popups (top-right panel)
+    commands.py        all claude.* cheat commands
+    journal.py         persistent cross-session story memory
 ```

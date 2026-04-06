@@ -142,6 +142,7 @@ claude.auto_events off
 | `max_tokens` | `512` | Max length of responses |
 | `language` | `English` | Language for all generated content |
 | `main_sim_name` | *(blank)* | Protagonist sim (FirstName LastName). Falls back to active sim. |
+| `phone_allow_ghosts` | `true` | Allow ghost sims to call/text. Set `false` to only hear from the living. |
 | `auto_events_enabled` | `false` | Turn on random auto-events |
 | `auto_event_interval_minutes` | `20` | Real-world minutes between checks |
 | `auto_event_chance` | `40` | Percent chance each check fires |

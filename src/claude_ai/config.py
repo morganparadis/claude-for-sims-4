@@ -16,16 +16,21 @@ _SETTINGS_FILENAME = "ClaudeAI_Settings.json"
 
 
 def _find_config_file():
-    """Search for config file relative to this script, walking up directories."""
+    """Search for config file in the Mods folder and relative to this script."""
+    # Primary: check the known Mods folder location directly
+    # (walking up from __file__ doesn't work inside a .ts4script zip)
+    mods_folder = os.path.join(
+        os.path.expanduser("~"), "Documents",
+        "Electronic Arts", "The Sims 4", "Mods",
+    )
+    mods_path = os.path.join(mods_folder, _CONFIG_FILENAME)
+    if os.path.isfile(mods_path):
+        return os.path.abspath(mods_path)
+
+    # Fallback: walk up from script location (works during development)
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    search_dirs = [
-        script_dir,
-        os.path.join(script_dir, ".."),
-        os.path.join(script_dir, "..", ".."),
-        os.path.join(script_dir, "..", "..", ".."),
-    ]
-    for d in search_dirs:
-        path = os.path.join(d, _CONFIG_FILENAME)
+    for up in ("", "..", os.path.join("..", ".."), os.path.join("..", "..", "..")):
+        path = os.path.join(script_dir, up, _CONFIG_FILENAME)
         if os.path.isfile(path):
             return os.path.abspath(path)
     return None

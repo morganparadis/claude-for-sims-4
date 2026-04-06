@@ -1,10 +1,42 @@
 """
 Phone calls and texts -- generates AI-powered messages from relationship sims.
 Uses the fast model for quick generation.
+
+Calls show as modal phone dialogs with the caller's portrait.
+Texts show as top-right notifications.
 """
 import random
 
 from . import api_client, sim_context, config, journal, notifications
+
+
+def _show_phone_dialog(caller_sim_info, title, message, ring=True):
+    """Show a phone dialog with the caller's portrait. Ring for calls, buzz for texts."""
+    try:
+        from sims4.localization import LocalizationHelperTuning
+        from ui.ui_dialog import UiDialogOk, PhoneRingType
+        from distributor.shared_messages import IconInfoData
+        import services
+
+        client = services.client_manager().get_first_client()
+        if not client or not client.active_sim_info:
+            return False
+
+        loc_text = LocalizationHelperTuning.get_raw_text(message)
+        loc_title = LocalizationHelperTuning.get_raw_text(title)
+
+        dialog = UiDialogOk.TunableFactory().default(
+            client.active_sim_info,
+            text=lambda: loc_text,
+            title=lambda: loc_title,
+        )
+        dialog.phone_ring_type = PhoneRingType.RING if ring else PhoneRingType.BUZZ
+
+        dialog.show_dialog(icon_override=IconInfoData(obj_instance=caller_sim_info))
+        return True
+    except Exception:
+        pass
+    return False
 
 _CALL_SYSTEM = """You are writing one side of a phone call in The Sims 4. You are writing \
 what the CALLER says (the player's sim is listening). Write in {language}.
@@ -105,10 +137,16 @@ def generate_call(callback=None, output=None):
     )
 
     def _on_result(text, error):
-        title = f"Incoming Call - {contact['name']}"
+        title = f"Call from {contact['name']}"
         if text:
             journal.add_entry("call", f"Call from {contact['name']}:\n{text}", sim_name=contact["name"])
-            notifications.show(title, text, output=output)
+            # Try the phone call dialog with caller's portrait
+            caller_si = contact.get("sim_info")
+            shown = False
+            if caller_si:
+                shown = _show_phone_dialog(caller_si, title, text)
+            if not shown:
+                notifications.show(title, text, output=output)
         elif error:
             notifications.show_error(error, output=output)
         if callback:
@@ -151,7 +189,13 @@ def generate_text(callback=None, output=None):
         title = f"Text from {contact['name']}"
         if text:
             journal.add_entry("text", f"Text from {contact['name']}:\n{text}", sim_name=contact["name"])
-            notifications.show(title, text, output=output)
+            # Show as phone popup (buzz, not ring)
+            sender_si = contact.get("sim_info")
+            shown = False
+            if sender_si:
+                shown = _show_phone_dialog(sender_si, title, text, ring=False)
+            if not shown:
+                notifications.show(title, text, output=output)
         elif error:
             notifications.show_error(error, output=output)
         if callback:

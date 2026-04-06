@@ -122,6 +122,23 @@ Rules:
 - Never use profanity or explicit content"""
 
 
+def _is_ghost(sim_info):
+    """Check if a sim is dead/ghost."""
+    try:
+        if sim_info.is_ghost():
+            return True
+    except Exception:
+        pass
+    try:
+        # Fallback: check death type
+        death_type = getattr(sim_info, "death_type", None)
+        if death_type is not None and str(death_type) != "NONE":
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def _pick_random_relationship_sim():
     """Pick a random non-household sim from the protagonist's relationship network."""
     main_si = sim_context.get_main_sim_info()
@@ -134,6 +151,11 @@ def _pick_random_relationship_sim():
             return None
         rels = sim_context.get_sim_relationships(active.sim_info)
         contacts = [r for r in rels if not r.get("in_household")]
+
+    # Filter out ghosts unless config allows them
+    allow_ghosts = config.get_config().getboolean("claude_ai", "phone_allow_ghosts", fallback=True)
+    if not allow_ghosts:
+        contacts = [c for c in contacts if not _is_ghost(c.get("sim_info"))]
 
     if not contacts:
         return None

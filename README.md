@@ -1,6 +1,6 @@
 # Claude AI for The Sims 4
 
-Brings AI-generated dialogue, storylines, random events, phone calls, and challenges to your game using the Claude API. Results show as in-game notification popups and phone dialogs — not just the cheat console.
+Brings AI-generated dialogue, storylines, random events, phone calls, and challenges to your game using the Claude API. Results show as in-game notification popups and phone dialogs.
 
 ---
 

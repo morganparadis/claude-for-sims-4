@@ -239,6 +239,14 @@ def _describe_relationship(contact):
         except Exception:
             pass
 
+        # Gender
+        try:
+            gender = str(getattr(si, "gender", "")).replace("Gender.", "")
+            if gender:
+                parts.append(f"Gender: {gender}")
+        except Exception:
+            pass
+
         # Traits — the core of personality
         traits = sim_context.get_sim_traits(si, limit=6)
         if traits:

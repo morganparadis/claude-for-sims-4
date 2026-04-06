@@ -69,8 +69,11 @@ Open the cheat console with `Ctrl+Shift+C`, type a command, press Enter.
 |---|---|
 | `claude.call` | Incoming phone call from a relationship sim (ring sound, caller portrait) |
 | `claude.text` | Text message from a relationship sim (buzz sound, sender portrait) |
+| `claude.reply <message>` | Reply to the last call or text — they'll respond back |
 
-Calls and texts show as in-game phone dialogs with the sim's portrait, just like the game's built-in phone system. They're pulled from your protagonist's relationship network (non-household sims only), shaped by the sender's personality and relationship to your sim, and saved to the journal so future stories can reference them.
+Calls and texts show as in-game phone dialogs with the sim's portrait. Click **Reply** on the popup to continue the conversation via `claude.reply`. The full conversation history is tracked, so back-and-forth exchanges stay coherent.
+
+Each sim has a unique voice based on their **age, traits, mood, career, and aspiration**. A Goofball Teen texts completely differently from a Snob Elder. Past interactions with that sim are also included, so they'll reference previous conversations naturally.
 
 ### Protagonist
 | Command | What it does |
@@ -89,6 +92,7 @@ If no protagonist is set, the mod falls back to your currently active sim.
 |---|---|
 | `claude.chat <message>` | Freeform — ask anything about your game |
 | `claude.journal` | View recent journal entries |
+| `claude.journal_sim First Last` | View journal entries for a specific sim |
 | `claude.auto_events on` | Turn on random auto-events for this session |
 | `claude.auto_events off` | Turn them off |
 | `claude.status` | Show config, auto-event status, and all commands |

@@ -79,6 +79,7 @@ try:
         output("  claude.goals                — weekly session goals")
         output("  claude.call                 — incoming call from a relationship sim")
         output("  claude.text                 — text message from a relationship sim")
+        output("  claude.reply <message>      — reply to the last call or text")
         output("  claude.chat <message>       — chat about your game")
         output("  claude.set_main First Last  — set your protagonist sim")
         output("  claude.main                 — show protagonist info")
@@ -302,6 +303,25 @@ try:
         output("[Claude AI] Checking messages...")
         phone.generate_text(output=output)
 
+    @sims4.commands.Command("claude.reply", command_type=sims4.commands.CommandType.Live)
+    def cmd_reply(*args, _connection=None):
+        output = sims4.commands.CheatOutput(_connection)
+        if not _require_config(output):
+            return
+        message = " ".join(args) if args else ""
+        if not message:
+            convo = phone.get_active_conversation()
+            if convo:
+                output(f"[Claude AI] Active conversation with {convo['contact']['name']}")
+                output("[Claude AI] Usage: claude.reply <your message>")
+            else:
+                output("[Claude AI] No active conversation. Use claude.call or claude.text first.")
+            return
+        convo = phone.get_active_conversation()
+        if convo:
+            output(f"[Claude AI] Replying to {convo['contact']['name']}...")
+        phone.generate_reply(message, output=output)
+
     # -------------------------------------------------------------------------
     # Main sim (protagonist)
     # -------------------------------------------------------------------------
@@ -445,6 +465,30 @@ try:
         output = sims4.commands.CheatOutput(_connection)
         text = journal.format_recent_for_display(n=10)
         output(text)
+
+    @sims4.commands.Command("claude.journal_sim", command_type=sims4.commands.CommandType.Live)
+    def cmd_journal_sim(first_name: str = None, last_name: str = None, _connection=None):
+        output = sims4.commands.CheatOutput(_connection)
+        if not first_name:
+            output("[Claude AI] Usage: claude.journal_sim <FirstName> <LastName>")
+            return
+        full_name = f"{first_name} {last_name}".strip() if last_name else first_name
+        entries = journal.get_sim_history(full_name, n=10)
+        if not entries:
+            output(f"[Claude AI] No journal entries for {full_name}.")
+            return
+        output(f"=== Journal entries for {full_name} ({len(entries)} shown) ===")
+        for e in reversed(entries):
+            try:
+                import datetime
+                dt = datetime.datetime.fromisoformat(e["timestamp"])
+                date_str = dt.strftime("%b %d %H:%M")
+            except Exception:
+                date_str = "?"
+            label = e.get("type", "note").replace("_", " ").title()
+            preview = e.get("content", "").strip()[:400]
+            output(f"\n[{date_str}] {label}")
+            output(preview)
 
     @sims4.commands.Command("claude.journal_clear", command_type=sims4.commands.CommandType.Live)
     def cmd_journal_clear(_connection=None):

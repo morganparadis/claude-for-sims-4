@@ -122,6 +122,40 @@ def get_entry_count():
     return len(_load())
 
 
+def get_sim_history(sim_name, n=6):
+    """Return recent journal entries involving a specific sim."""
+    entries = _load()
+    matched = [e for e in entries if e.get("sim", "").lower() == sim_name.lower()]
+    return matched[-n:]
+
+
+def format_sim_history_for_prompt(sim_name, n=6):
+    """
+    Return a prompt-friendly summary of recent interactions with a specific sim.
+    Returns empty string if no history.
+    """
+    entries = get_sim_history(sim_name, n)
+    if not entries:
+        return ""
+
+    lines = [f"Past interactions with {sim_name}:"]
+    for e in entries:
+        try:
+            dt = datetime.datetime.fromisoformat(e["timestamp"])
+            date_str = dt.strftime("%b %d")
+        except Exception:
+            date_str = "?"
+
+        label = e.get("type", "note").replace("_", " ").title()
+        preview = e.get("content", "").replace("\n", " ").strip()[:_PREVIEW_CHARS]
+        if len(e.get("content", "")) > _PREVIEW_CHARS:
+            preview += "..."
+
+        lines.append(f"  [{date_str}] {label}: {preview}")
+
+    return "\n".join(lines)
+
+
 def format_recent_for_display(n=10):
     """Longer version for the claude.journal command — shows more content."""
     entries = get_recent(n)

@@ -147,6 +147,84 @@ def _pick_random_relationship_sim():
     return random.choices(contacts, weights=weights, k=1)[0]
 
 
+def _get_mutual_contacts(contact):
+    """
+    Find sims that both the protagonist and the contact have relationships with.
+    Returns a list of short descriptions like "Bella Goth (your Friend, their Crush)".
+    """
+    mutuals = []
+    try:
+        main_si = sim_context.get_main_sim_info()
+        other_si = contact.get("sim_info")
+        if not main_si or not other_si:
+            return mutuals
+
+        # Get the protagonist's relationship targets
+        main_rt = main_si.relationship_tracker
+        main_targets = set(main_rt.target_sim_gen())
+        main_targets.discard(other_si.sim_id)
+
+        # Get the contact's relationship targets
+        other_rt = other_si.relationship_tracker
+        other_targets = set(other_rt.target_sim_gen())
+        other_targets.discard(main_si.sim_id)
+
+        # Find overlap
+        shared_ids = main_targets & other_targets
+        if not shared_ids:
+            return mutuals
+
+        import services
+        sm = services.sim_info_manager()
+
+        for sid in list(shared_ids)[:6]:  # cap at 6 to keep prompt reasonable
+            try:
+                si = sm.get(sid)
+                if not si:
+                    continue
+                name = f"{si.first_name} {si.last_name}".strip()
+
+                # Get relationship bits from protagonist's perspective
+                main_bits = []
+                try:
+                    for bit in main_rt.get_all_bits(sid):
+                        bn = sim_context._get_trait_name(bit)
+                        for kw in ("Friend", "Enemy", "Romantic", "Married", "BFF",
+                                   "Crush", "Family", "Sibling", "Parent", "Child"):
+                            if kw in bn:
+                                label = bn.replace("RelationshipBit_", "").replace("Romantic_", "").replace("_", " ").strip()
+                                main_bits.append(label)
+                                break
+                except Exception:
+                    pass
+
+                # Get relationship bits from contact's perspective
+                other_bits = []
+                try:
+                    for bit in other_rt.get_all_bits(sid):
+                        bn = sim_context._get_trait_name(bit)
+                        for kw in ("Friend", "Enemy", "Romantic", "Married", "BFF",
+                                   "Crush", "Family", "Sibling", "Parent", "Child"):
+                            if kw in bn:
+                                label = bn.replace("RelationshipBit_", "").replace("Romantic_", "").replace("_", " ").strip()
+                                other_bits.append(label)
+                                break
+                except Exception:
+                    pass
+
+                if main_bits or other_bits:
+                    main_label = ", ".join(main_bits[:2]) if main_bits else "acquaintance"
+                    other_label = ", ".join(other_bits[:2]) if other_bits else "acquaintance"
+                    mutuals.append(f"{name} (your {main_label}, their {other_label})")
+                else:
+                    mutuals.append(f"{name} (mutual acquaintance)")
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return mutuals
+
+
 def _describe_relationship(contact):
     """Build a detailed character description for the prompt."""
     parts = [f"Name: {contact['name']}"]
@@ -233,12 +311,17 @@ def generate_call(callback=None, output=None):
     system = _CALL_SYSTEM.format(language=language)
     rel_desc = _describe_relationship(contact)
 
-    # Include past interactions with this specific sim
     sim_history = journal.format_sim_history_for_prompt(contact["name"])
     history_block = f"\n\n{sim_history}" if sim_history else ""
 
+    mutuals = _get_mutual_contacts(contact)
+    mutual_block = ""
+    if mutuals:
+        mutual_block = "\n\nPeople you both know:\n" + "\n".join(f"  - {m}" for m in mutuals)
+        mutual_block += "\nFeel free to gossip about, mention, or bring up any of these sims naturally."
+
     prompt = (
-        f"Caller info:\n{rel_desc}{history_block}\n\n"
+        f"Caller info:\n{rel_desc}{history_block}{mutual_block}\n\n"
         f"They are calling {main_name}.\n\n"
         f"Write what {contact['name']} says during this phone call. "
         f"If there is past interaction history, reference or build on it naturally. "
@@ -290,8 +373,14 @@ def generate_text(callback=None, output=None):
     sim_history = journal.format_sim_history_for_prompt(contact["name"])
     history_block = f"\n\n{sim_history}" if sim_history else ""
 
+    mutuals = _get_mutual_contacts(contact)
+    mutual_block = ""
+    if mutuals:
+        mutual_block = "\n\nPeople you both know:\n" + "\n".join(f"  - {m}" for m in mutuals)
+        mutual_block += "\nFeel free to gossip about, mention, or bring up any of these sims naturally."
+
     prompt = (
-        f"Sender info:\n{rel_desc}{history_block}\n\n"
+        f"Sender info:\n{rel_desc}{history_block}{mutual_block}\n\n"
         f"They are texting {main_name}.\n\n"
         f"Write 1-3 text messages from {contact['name']}. "
         f"If there is past interaction history, reference or build on it naturally. "
@@ -357,8 +446,13 @@ def generate_reply(player_message, callback=None, output=None):
     sim_history = journal.format_sim_history_for_prompt(other_name)
     history_block = f"\n\n{sim_history}" if sim_history else ""
 
+    mutuals = _get_mutual_contacts(contact)
+    mutual_block = ""
+    if mutuals:
+        mutual_block = "\n\nPeople you both know:\n" + "\n".join(f"  - {m}" for m in mutuals)
+
     prompt = (
-        f"Relationship info:\n{rel_desc}{history_block}\n\n"
+        f"Relationship info:\n{rel_desc}{history_block}{mutual_block}\n\n"
         f"Conversation so far:\n{convo_text}\n\n"
         f"Write {other_name}'s reply (1-3 short text messages)."
     )

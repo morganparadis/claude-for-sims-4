@@ -117,97 +117,155 @@ def get_main_sim_info():
     return None
 
 
+def _get_trait_name(trait):
+    """Extract a readable name from a trait object, trying multiple access patterns."""
+    for attr in ("__name__", ):
+        try:
+            n = getattr(trait, attr, None)
+            if n:
+                return n
+        except Exception:
+            pass
+    try:
+        return type(trait).__name__
+    except Exception:
+        return str(trait)
+
+
+def _read_relationship_for_target(rt, target_sim_id, sim_manager):
+    """Read relationship data for a specific target sim using the tracker API."""
+    _MEANINGFUL_BITS = (
+        "Friend", "Enemy", "Romantic", "Married", "Engaged",
+        "Divorced", "BFF", "Crush", "Partner", "Hate",
+        "Family", "Despise", "Sibling", "Parent", "Child",
+    )
+
+    other_si = sim_manager.get(target_sim_id)
+    if not other_si:
+        return None
+
+    # Get relationship bits
+    bit_labels = []
+    try:
+        bits = rt.get_all_bits(target_sim_id)
+        if bits:
+            for bit in bits:
+                bn = _get_trait_name(bit)
+                if any(kw in bn for kw in _MEANINGFUL_BITS):
+                    label = (bn.replace("RelationshipBit_", "")
+                               .replace("Romantic_", "")
+                               .replace("_", " ").strip())
+                    if label and label not in bit_labels:
+                        bit_labels.append(label)
+    except Exception:
+        pass
+
+    # Get friendship/romance scores
+    friendship, romance = 0, 0
+    try:
+        # Try get_relationship_score with track type names
+        for method in ("get_relationship_score",):
+            fn = getattr(rt, method, None)
+            if not fn:
+                continue
+            # Try to get friendship track
+            try:
+                val = fn(target_sim_id)
+                if val is not None:
+                    friendship = int(val)
+            except TypeError:
+                # Might need a track type argument — try without
+                pass
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    return {
+        "sim_info": other_si,
+        "sim_id": target_sim_id,
+        "name": f"{other_si.first_name} {other_si.last_name}".strip(),
+        "status": ", ".join(bit_labels[:3]),
+        "friendship": friendship,
+        "romance": romance,
+    }
+
+
 def get_main_sim_network(main_si, min_friendship=25):
     """
-    Return relationship info for sims your main sim actually knows.
-    Scoped to their relationship_tracker — never scans all sims in the save.
+    Return (household_members, relationships) for the protagonist.
 
-    Only includes sims with meaningful relationship bits (Friend, Enemy,
-    Romantic partner, family, etc.) or a friendship score above min_friendship.
-    Household members are returned separately so they can be labelled clearly.
+    Household members come directly from the active household — they always
+    appear even without relationship data. Outside relationships come from
+    the protagonist's relationship tracker using target_sim_gen().
     """
+    # --- Household members: always include everyone in the household ---
+    household_members = []
     household_ids = set()
     try:
         import services
         hh = services.active_household()
         if hh:
-            household_ids = {si.sim_id for si in hh.sim_info_gen()}
+            for si in hh.sim_info_gen():
+                if si.sim_id == main_si.sim_id:
+                    continue
+                household_ids.add(si.sim_id)
+                household_members.append({
+                    "sim_info": si,
+                    "sim_id": si.sim_id,
+                    "name": f"{si.first_name} {si.last_name}".strip(),
+                    "status": "",
+                    "friendship": None,
+                    "romance": None,
+                    "in_household": True,
+                })
     except Exception:
         pass
 
-    household_members = []
+    # --- Relationships: iterate target_sim_gen() ---
     relationships = []
+    seen_ids = set(household_ids)
 
     try:
         import services
         sm = services.sim_info_manager()
-        my_id = main_si.sim_id
+        rt = main_si.relationship_tracker
 
-        _MEANINGFUL_BITS = (
-            "Friend", "Enemy", "Romantic", "Married", "Engaged",
-            "Divorced", "BFF", "Crush", "Partner", "Hate",
-            "FamilyRelationship", "Despise",
-        )
-
-        for rel in main_si.relationship_tracker.relationships.values():
+        for target_sim_id in rt.target_sim_gen():
             try:
-                other_id = rel.sim_id_b if rel.sim_id_a == my_id else rel.sim_id_a
-                other_si = sm.get(other_id)
-                if not other_si:
+                entry = _read_relationship_for_target(rt, target_sim_id, sm)
+                if not entry:
                     continue
 
-                # Relationship bit labels
-                bit_labels = []
-                try:
-                    for bit in rel.relationship_bit_tracker.relationship_bits:
-                        bn = bit.__name__
-                        if any(kw in bn for kw in _MEANINGFUL_BITS):
-                            label = (bn.replace("RelationshipBit_", "")
-                                       .replace("Romantic_", "")
-                                       .replace("_", " ").strip())
-                            bit_labels.append(label)
-                except Exception:
-                    pass
+                sid = entry["sim_id"]
 
-                # Friendship / romance scores
-                friendship, romance = 0, None
-                try:
-                    for track in rel._relationship_tracks.values():
-                        tn = track.__class__.__name__.lower()
-                        val = int(track.get_value())
-                        if "romance" in tn:
-                            romance = val
-                        elif "friend" in tn or "acquaint" in tn:
-                            friendship = val
-                except Exception:
-                    pass
-
-                # Skip sims we have no meaningful connection to
-                if not bit_labels and abs(friendship) < min_friendship:
+                # Enrich household member entries with relationship data
+                if sid in household_ids:
+                    for hm in household_members:
+                        if hm["sim_id"] == sid:
+                            hm["status"] = entry["status"]
+                            hm["friendship"] = entry["friendship"]
+                            hm["romance"] = entry["romance"]
+                            break
                     continue
 
-                entry = {
-                    "sim_info": other_si,
-                    "name": f"{other_si.first_name} {other_si.last_name}".strip(),
-                    "status": ", ".join(bit_labels[:3]),
-                    "friendship": friendship,
-                    "romance": romance,
-                    "in_household": other_id in household_ids,
-                }
+                if sid in seen_ids:
+                    continue
+                seen_ids.add(sid)
 
-                if other_id in household_ids:
-                    household_members.append(entry)
-                else:
-                    relationships.append(entry)
+                # Filter non-household by significance
+                if not entry["status"] and abs(entry.get("friendship") or 0) < min_friendship:
+                    continue
 
+                entry["in_household"] = False
+                relationships.append(entry)
             except Exception:
                 continue
     except Exception:
         pass
 
-    # Sort: household members by name, relationships by friendship score desc
     household_members.sort(key=lambda x: x["name"])
-    relationships.sort(key=lambda x: -(abs(x["friendship"] or 0)))
+    relationships.sort(key=lambda x: -(abs(x.get("friendship") or 0)))
 
     return household_members, relationships
 
@@ -234,17 +292,37 @@ def get_active_sim():
 def get_sim_traits(sim_info, limit=6):
     """Return a list of cleaned trait names for a sim."""
     try:
-        raw = list(sim_info.trait_tracker.traits)
+        # Try multiple ways to get the trait list
+        raw = None
+        for accessor in (
+            lambda: list(sim_info.trait_tracker.equipped_traits),
+            lambda: list(sim_info.trait_tracker.personality_traits),
+            lambda: list(sim_info.trait_tracker.traits),
+            lambda: list(sim_info.get_traits()),
+        ):
+            try:
+                raw = accessor()
+                if raw:
+                    break
+            except Exception:
+                continue
+
+        if not raw:
+            return []
+
         names = []
         for t in raw:
-            name = t.__name__
+            name = _get_trait_name(t)
             # Skip internal/occult traits that aren't player-visible
-            if any(name.startswith(p) for p in ("trait_occult", "trait_hidden", "trait_gender")):
+            if any(kw in name.lower() for kw in ("occult", "hidden", "gender", "ghost")):
                 continue
-            cleaned = name.replace("trait_", "").replace("_", " ").title()
-            names.append(cleaned)
-            if len(names) >= limit:
-                break
+            cleaned = (name
+                .replace("trait_", "").replace("Trait_", "")
+                .replace("_", " ").strip().title())
+            if cleaned and cleaned not in names:
+                names.append(cleaned)
+                if len(names) >= limit:
+                    break
         return names
     except Exception:
         return []
@@ -255,7 +333,8 @@ def get_sim_mood(sim_info):
     try:
         mood = sim_info.get_mood()
         if mood:
-            return mood.__name__.replace("Mood_", "").replace("_", " ")
+            name = _get_trait_name(mood)
+            return name.replace("Mood_", "").replace("mood_", "").replace("_", " ").strip() or "Neutral"
     except Exception:
         pass
     return "Neutral"
@@ -271,12 +350,30 @@ def get_sim_skills(sim_info, min_level=1, limit=12):
         tracker = sim_info.skill_tracker
         if not tracker:
             return skills
-        for stat_inst in tracker._statistics.values():
+        # Try multiple ways to iterate skills
+        stat_items = None
+        for accessor in (
+            lambda: tracker._statistics.values(),
+            lambda: tracker.statistics.values(),
+            lambda: tracker._all_skills(),
+            lambda: tracker.all_skills(),
+        ):
+            try:
+                stat_items = list(accessor())
+                if stat_items:
+                    break
+            except Exception:
+                continue
+
+        if not stat_items:
+            return skills
+
+        for stat_inst in stat_items:
             try:
                 level = int(stat_inst.get_value())
                 if level < min_level:
                     continue
-                name = stat_inst.__class__.__name__
+                name = type(stat_inst).__name__
                 cleaned = (name
                     .replace("Skill_Adult_", "")
                     .replace("Skill_Child_", "")
@@ -290,7 +387,6 @@ def get_sim_skills(sim_info, min_level=1, limit=12):
                 continue
     except Exception:
         pass
-    # Sort by level descending, take top N
     sorted_skills = dict(sorted(skills.items(), key=lambda x: -x[1])[:limit])
     return sorted_skills
 

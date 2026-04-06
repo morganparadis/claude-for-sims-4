@@ -1,77 +1,72 @@
 """
 Displays text to the player via Sims 4 UI notifications.
 Falls back to cheat console output if the UI isn't available.
-
-Note: Sims 4 notifications have a character limit, so long text gets truncated.
-The full text is always echoed to the cheat console as a fallback.
 """
 
-# Max chars to show in a notification popup before it looks bad
 _NOTIFICATION_MAX_CHARS = 800
 
 
 def _truncate(text, max_chars=_NOTIFICATION_MAX_CHARS):
     if len(text) <= max_chars:
         return text
-    return text[:max_chars].rsplit(" ", 1)[0] + "…\n[See cheat console for full text]"
+    return text[:max_chars].rsplit(" ", 1)[0] + "... [See cheat console for full text]"
 
 
 def _show_game_notification(title, message):
     """
-    Attempt to show an in-game notification popup.
+    Show an in-game notification popup (top-right notification panel).
+    Uses the same pattern as MC Command Center.
     Returns True on success, False if unavailable.
     """
+    display_text = _truncate(message)
+
     try:
-        import sims4.localization
-        import ui.ui_dialog_notification
+        from sims4.localization import LocalizationHelperTuning
+        from ui.ui_dialog_notification import UiDialogNotification
         import services
 
         client = services.client_manager().get_first_client()
-        if client is None:
+        if not client:
             return False
 
-        display_text = _truncate(message)
+        sim_info = client.active_sim_info
+        if not sim_info:
+            return False
 
-        notification = ui.ui_dialog_notification.UiDialogNotification.TunableFactory().default_factory(
-            client.active_sim,
-            text=lambda **_: sims4.localization.LocalizationHelperTuning.get_raw_text(display_text),
-            title=lambda **_: sims4.localization.LocalizationHelperTuning.get_raw_text(title),
+        # Build localized text as lambdas (not lambda **_:, just lambda:)
+        loc_text = LocalizationHelperTuning.get_raw_text(display_text)
+        loc_title = LocalizationHelperTuning.get_raw_text(title)
+
+        notification = UiDialogNotification.TunableFactory().default(
+            sim_info,
+            text=lambda: loc_text,
+            title=lambda: loc_title,
         )
         notification.show_dialog()
         return True
     except Exception:
-        return False
-
-
-def _console_output(text, connection=None):
-    """Write to cheat console if possible."""
-    try:
-        import sims4.commands
-        sims4.commands.output(text, connection)
-    except Exception:
         pass
+
+    return False
 
 
 def show(title, message, output=None):
     """
     Show a message to the player.
-
     Tries the in-game notification popup first.
-    Always also echoes to the cheat console (via output or fallback).
-
-    Args:
-        title:   Short heading string
-        message: Body text
-        output:  sims4.commands.CheatOutput instance (optional but recommended)
+    Always echoes to the cheat console so nothing is lost.
     """
     _show_game_notification(title, message)
 
-    # Always echo full text to console so nothing is lost to truncation
-    full_text = f"[Claude AI — {title}]\n{message}"
+    full_text = f"[Claude AI - {title}]\n{message}"
     if output:
         output(full_text)
     else:
-        _console_output(full_text)
+        try:
+            import sims4.commands
+            sims4.commands.output(full_text, None)
+        except Exception:
+            pass
 
 
 def show_error(message, output=None):

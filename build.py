@@ -1,5 +1,8 @@
 """
-Build script — packages the mod into a .ts4script file and optionally installs it.
+Build script — compiles .py to .pyc (Python 3.7) and packages into a .ts4script file.
+
+The Sims 4 uses Python 3.7 and only loads compiled .pyc files from .ts4script zips.
+This script uses a local Python 3.7 (in tools/python37/) to compile.
 
 Usage:
   python build.py           Build and auto-install to Sims 4 Mods folder
@@ -7,23 +10,23 @@ Usage:
 """
 import os
 import sys
+import subprocess
 import zipfile
 import shutil
+import tempfile
 
 MOD_NAME = "ClaudeAI"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 SRC_DIR = os.path.join(SCRIPT_DIR, "src")
 OUTPUT_FILE = os.path.join(SCRIPT_DIR, f"{MOD_NAME}.ts4script")
 CONFIG_FILE = os.path.join(SCRIPT_DIR, "claude_config.cfg")
+PYTHON37 = os.path.join(SCRIPT_DIR, "tools", "python37", "python.exe")
 
 
 def find_mods_folder():
     """Attempt to locate the Sims 4 Mods folder on this machine."""
     docs = os.path.expanduser("~/Documents")
     candidates = [
-        # Windows
-        os.path.join(docs, "Electronic Arts", "The Sims 4", "Mods"),
-        # Mac
         os.path.join(docs, "Electronic Arts", "The Sims 4", "Mods"),
         os.path.expanduser("~/Documents/Electronic Arts/The Sims 4/Mods"),
     ]
@@ -33,9 +36,28 @@ def find_mods_folder():
     return None
 
 
+def compile_py_to_pyc(py_path, pyc_path):
+    """Compile a .py file to .pyc using Python 3.7."""
+    result = subprocess.run(
+        [PYTHON37, "-c", f"import py_compile; py_compile.compile(r'{py_path}', r'{pyc_path}', doraise=True)"],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        print(f"  COMPILE ERROR: {py_path}")
+        print(f"    {result.stderr.strip()}")
+        sys.exit(1)
+
+
 def build():
     if not os.path.isdir(SRC_DIR):
         print(f"ERROR: src/ directory not found at {SRC_DIR}")
+        sys.exit(1)
+
+    if not os.path.isfile(PYTHON37):
+        print(f"ERROR: Python 3.7 not found at {PYTHON37}")
+        print("Run this once to set it up:")
+        print("  1. Download https://www.python.org/ftp/python/3.7.9/python-3.7.9-embed-amd64.zip")
+        print("  2. Extract to tools/python37/ in this project folder")
         sys.exit(1)
 
     py_files = []
@@ -50,14 +72,28 @@ def build():
         print("ERROR: No .py files found in src/")
         sys.exit(1)
 
-    print(f"Building {MOD_NAME}.ts4script …")
-    with zipfile.ZipFile(OUTPUT_FILE, "w", zipfile.ZIP_DEFLATED) as zf:
+    # Compile to a temp directory, then zip
+    with tempfile.TemporaryDirectory() as tmp:
+        print(f"Building {MOD_NAME}.ts4script ...")
+        print(f"  Compiling {len(py_files)} files with Python 3.7...")
+
+        compiled = []
         for full_path, arc_path in sorted(py_files, key=lambda x: x[1]):
-            zf.write(full_path, arc_path)
-            print(f"  + {arc_path}")
+            # .py -> .pyc in archive path
+            pyc_arc = arc_path.replace(".py", ".pyc")
+            pyc_tmp = os.path.join(tmp, pyc_arc)
+            os.makedirs(os.path.dirname(pyc_tmp) or tmp, exist_ok=True)
+
+            compile_py_to_pyc(full_path, pyc_tmp)
+            compiled.append((pyc_tmp, pyc_arc))
+            print(f"  + {pyc_arc}")
+
+        with zipfile.ZipFile(OUTPUT_FILE, "w", zipfile.ZIP_DEFLATED) as zf:
+            for pyc_tmp, pyc_arc in compiled:
+                zf.write(pyc_tmp, pyc_arc)
 
     size_kb = os.path.getsize(OUTPUT_FILE) / 1024
-    print(f"\nBuilt: {OUTPUT_FILE} ({size_kb:.1f} KB, {len(py_files)} files)")
+    print(f"\nBuilt: {OUTPUT_FILE} ({size_kb:.1f} KB, {len(compiled)} files)")
     return OUTPUT_FILE
 
 
@@ -89,14 +125,16 @@ def install(script_file):
             print("  Get a key at: https://console.anthropic.com/")
             print("=" * 60)
     else:
-        print(f"  Skipped config (already exists — your API key is safe)")
+        print(f"  Skipped config (already exists -- your API key is safe)")
+
+    # Clean up old test file if present
+    test_file = os.path.join(mods_folder, "ClaudeAI_Test.ts4script")
+    if os.path.exists(test_file):
+        os.remove(test_file)
+        print(f"  Cleaned up: ClaudeAI_Test.ts4script")
 
     print()
-    print("Installation complete! Launch The Sims 4 and make sure:")
-    print("  • Game Options → Other → Enable Custom Content and Mods ✓")
-    print("  • Game Options → Other → Enable Script Mods ✓")
-    print("  • Restart the game if it was already running")
-    print()
+    print("Installation complete! Restart The Sims 4 to load the mod.")
     print("Then open the cheat console (Ctrl+Shift+C) and type: claude.status")
 
 

@@ -23,7 +23,7 @@ COMMANDS:
 
 try:
     import sims4.commands
-    from . import config, sim_context, dialogue, storyteller, event_generator, notifications, api_client, auto_events, journal
+    from . import config, sim_context, dialogue, storyteller, event_generator, notifications, api_client, auto_events, journal, phone
 
     # -------------------------------------------------------------------------
     # Helpers
@@ -77,7 +77,12 @@ try:
         output("  claude.challenge_easy       — easy challenge")
         output("  claude.challenge_hard       — hard challenge")
         output("  claude.goals                — weekly session goals")
+        output("  claude.call                 — incoming call from a relationship sim")
+        output("  claude.text                 — text message from a relationship sim")
         output("  claude.chat <message>       — chat about your game")
+        output("  claude.set_main First Last  — set your protagonist sim")
+        output("  claude.main                 — show protagonist info")
+        output("  claude.journal              — view recent journal entries")
         output("  claude.reload               — reload config file")
 
     @sims4.commands.Command("claude.reload", command_type=sims4.commands.CommandType.Live)
@@ -278,6 +283,26 @@ try:
         )
 
     # -------------------------------------------------------------------------
+    # Phone calls & texts
+    # -------------------------------------------------------------------------
+
+    @sims4.commands.Command("claude.call", command_type=sims4.commands.CommandType.Live)
+    def cmd_call(_connection=None):
+        output = sims4.commands.CheatOutput(_connection)
+        if not _require_config(output):
+            return
+        output("[Claude AI] Incoming call...")
+        phone.generate_call(output=output)
+
+    @sims4.commands.Command("claude.text", command_type=sims4.commands.CommandType.Live)
+    def cmd_text(_connection=None):
+        output = sims4.commands.CheatOutput(_connection)
+        if not _require_config(output):
+            return
+        output("[Claude AI] Checking messages...")
+        phone.generate_text(output=output)
+
+    # -------------------------------------------------------------------------
     # Main sim (protagonist)
     # -------------------------------------------------------------------------
 
@@ -333,6 +358,85 @@ try:
             output(f"[Claude AI] Protagonist set to '{name}' but not found in current save.")
 
     # -------------------------------------------------------------------------
+    # Debug
+    # -------------------------------------------------------------------------
+
+    @sims4.commands.Command("claude.debug", command_type=sims4.commands.CommandType.Live)
+    def cmd_debug(_connection=None):
+        output = sims4.commands.CheatOutput(_connection)
+        main_si = sim_context.get_main_sim_info()
+        if not main_si:
+            active = sim_context.get_active_sim()
+            main_si = active.sim_info if active else None
+        if not main_si:
+            output("[Claude AI] No sim found to debug.")
+            return
+
+        output(f"[Debug] Sim: {main_si.first_name} {main_si.last_name}")
+        output(f"[Debug] sim_info type: {type(main_si).__name__}")
+
+        # Trait tracker
+        try:
+            tt = main_si.trait_tracker
+            output(f"[Debug] trait_tracker type: {type(tt).__name__}")
+            output(f"[Debug] trait_tracker attrs: {[a for a in dir(tt) if 'trait' in a.lower()]}")
+        except Exception as e:
+            output(f"[Debug] trait_tracker error: {e}")
+
+        # Relationship tracker
+        try:
+            rt = main_si.relationship_tracker
+            output(f"[Debug] relationship_tracker type: {type(rt).__name__}")
+            rel_attrs = [a for a in dir(rt) if not a.startswith('__')]
+            output(f"[Debug] rel_tracker attrs (first 20): {rel_attrs[:20]}")
+            output(f"[Debug] rel_tracker attrs (next 20): {rel_attrs[20:40]}")
+
+            # Try to count relationships with various accessors
+            for attr in ("relationships", "_relationships", "_relationship_objects",
+                         "relationship_objects", "_all_bits"):
+                try:
+                    obj = getattr(rt, attr, None)
+                    if obj is not None:
+                        if hasattr(obj, '__len__'):
+                            output(f"[Debug] rt.{attr}: {type(obj).__name__}, len={len(obj)}")
+                        elif hasattr(obj, 'values'):
+                            output(f"[Debug] rt.{attr}: dict-like, len={len(list(obj.values()))}")
+                        else:
+                            output(f"[Debug] rt.{attr}: {type(obj).__name__}")
+                except Exception as e:
+                    output(f"[Debug] rt.{attr}: error {e}")
+
+            # Try method calls
+            for method in ("get_all_sim_relationships", "get_relationships",
+                           "get_all_bits", "target_sim_gen"):
+                try:
+                    fn = getattr(rt, method, None)
+                    if fn and callable(fn):
+                        result = list(fn())
+                        output(f"[Debug] rt.{method}(): returned {len(result)} items")
+                        if result:
+                            output(f"[Debug]   first item type: {type(result[0]).__name__}")
+                except Exception as e:
+                    output(f"[Debug] rt.{method}(): error {e}")
+
+        except Exception as e:
+            output(f"[Debug] relationship_tracker error: {e}")
+
+        # Skill tracker
+        try:
+            st = main_si.skill_tracker
+            output(f"[Debug] skill_tracker type: {type(st).__name__}")
+            skill_attrs = [a for a in dir(st) if 'skill' in a.lower() or 'stat' in a.lower()]
+            output(f"[Debug] skill_tracker attrs: {skill_attrs}")
+        except Exception as e:
+            output(f"[Debug] skill_tracker error: {e}")
+
+        # Test notification
+        output("[Debug] Testing notification popup...")
+        result = notifications._show_game_notification("Claude AI Test", "If you see this popup, notifications work!")
+        output(f"[Debug] Notification result: {result}")
+
+    # -------------------------------------------------------------------------
     # Journal
     # -------------------------------------------------------------------------
 
@@ -349,6 +453,10 @@ try:
         journal.clear()
         output(f"[Claude AI] Journal cleared ({count} entries deleted).")
 
-except ImportError:
-    # Running outside the Sims 4 game environment (e.g., during development)
-    pass
+except Exception as e:
+    # Running outside the Sims 4 game environment, or an error during load
+    try:
+        import sims4.commands
+        sims4.commands.output(f"[Claude AI] Commands failed to register: {type(e).__name__}: {e}", None)
+    except Exception:
+        pass

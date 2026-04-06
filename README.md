@@ -63,6 +63,14 @@ Open the cheat console with `Ctrl+Shift+C`, type a command, press Enter.
 | `claude.challenge_easy` | Easy challenge |
 | `claude.challenge_hard` | Hard challenge with strict rules |
 
+### Phone
+| Command | What it does |
+|---|---|
+| `claude.call` | Incoming phone call from a sim you have a relationship with |
+| `claude.text` | Text message from a relationship sim |
+
+Calls and texts are pulled from your protagonist's relationship network. The content is shaped by the sender's personality, mood, and how they feel about your sim. They're also saved to the journal, so future stories can reference them.
+
 ### Protagonist
 | Command | What it does |
 |---|---|

@@ -18,7 +18,7 @@ import random
 import threading
 import time
 
-from . import config, event_generator, storyteller, notifications
+from . import config, event_generator, storyteller, notifications, phone
 
 _thread = None
 _running = False
@@ -96,6 +96,10 @@ def _pick_and_fire():
         storyteller.generate_story_update(callback=on_result)
     elif chosen == "drama":
         storyteller.generate_relationship_drama(callback=on_result)
+    elif chosen == "call":
+        phone.generate_call()  # phone module handles its own notifications
+    elif chosen == "text":
+        phone.generate_text()  # phone module handles its own notifications
 
 
 # ---------------------------------------------------------------------------

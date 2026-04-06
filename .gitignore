@@ -8,3 +8,10 @@
 __pycache__/
 *.pyc
 *.pyo
+
+# Build tools and temp files
+tools/
+python37.zip
+mc_*.txt
+analyze_pyc.py
+decompile_test.py

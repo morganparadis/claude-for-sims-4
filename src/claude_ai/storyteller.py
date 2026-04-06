@@ -17,26 +17,6 @@ Your voice:
 - Write in {language}"""
 
 
-def _build_household_block(household):
-    """Format household context into a prompt-friendly string."""
-    if not household:
-        return "Unknown household with no information available."
-
-    lines = [
-        f"Household: {household.get('household_name', 'Unknown')}",
-        f"Funds: §{household.get('funds', '?')}",
-        "Members:",
-    ]
-    for m in household.get("members", []):
-        line = f"  - {m['name']} ({m.get('age', '?')}, {m.get('mood', '?')} mood)"
-        if m.get("traits"):
-            line += f" | Traits: {', '.join(m['traits'])}"
-        if m.get("career"):
-            line += f" | Career: {m['career']}"
-        lines.append(line)
-    return "\n".join(lines)
-
-
 def generate_story_update(callback=None):
     """
     Generate a 2–3 paragraph narrative update for the current household —
@@ -163,42 +143,3 @@ def generate_storyline(theme=None, callback=None):
     )
 
 
-def generate_relationship_drama(sim1_name=None, sim2_name=None, callback=None):
-    """
-    Generate a relationship-focused dramatic arc between two household members.
-    """
-    household = sim_context.get_household_context()
-    language = config.get_language()
-    system = _SYSTEM.format(language=language)
-
-    members = household.get("members", [])
-    if not members:
-        if callback:
-            callback(None, "No household members found.")
-        return None
-
-    # Pick first two members if names not supplied
-    names = [m["name"] for m in members]
-    name1 = sim1_name or (names[0] if len(names) > 0 else "Sim A")
-    name2 = sim2_name or (names[1] if len(names) > 1 else "Sim B")
-
-    context = _build_household_block(household)
-
-    prompt = (
-        f"{context}\n\n"
-        f"Write a dramatic relationship story arc between {name1} and {name2}. "
-        "This could be romantic tension, a long-simmering rivalry, a family betrayal, "
-        "or a budding friendship with complications.\n\n"
-        "Include:\n"
-        "THE SITUATION: [What's going on between them right now]\n"
-        "THE CONFLICT: [What's driving them apart or creating tension]\n"
-        "THE TURNING POINT: [A dramatic moment that changes everything]\n"
-        "POSSIBLE ENDINGS: [Two different ways this could resolve — one happy, one bittersweet]\n"
-        "HOW TO PLAY IT: [2–3 specific gameplay actions to enact this drama]"
-    )
-
-    return api_client.call_claude_async(
-        [{"role": "user", "content": prompt}],
-        system=system,
-        callback=callback,
-    )

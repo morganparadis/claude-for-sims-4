@@ -1,12 +1,11 @@
 """
 Claude API HTTP client.
-Uses urllib (Python stdlib) since pip packages aren't available in Sims 4's Python runtime.
+Uses curl via subprocess since the Sims 4's embedded Python 3.7 lacks SSL support.
 All calls are made on a background thread to avoid freezing the game.
 """
 import json
+import subprocess
 import threading
-import urllib.request
-import urllib.error
 
 from . import config
 
@@ -43,11 +42,6 @@ def call_claude_async(messages, system=None, use_fast_model=False, callback=None
         model = config.get_fast_model() if use_fast_model else config.get_default_model()
         max_tokens = config.get_max_tokens()
 
-        headers = {
-            "Content-Type": "application/json",
-            "x-api-key": api_key,
-            "anthropic-version": _API_VERSION,
-        }
         body = {
             "model": model,
             "max_tokens": max_tokens,
@@ -56,31 +50,60 @@ def call_claude_async(messages, system=None, use_fast_model=False, callback=None
         if system:
             body["system"] = system
 
-        req = urllib.request.Request(
-            _API_URL,
-            data=json.dumps(body).encode("utf-8"),
-            headers=headers,
-            method="POST",
-        )
+        body_json = json.dumps(body)
+
         try:
-            with urllib.request.urlopen(req, timeout=45) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                text = _extract_text(data)
+            # Hide the terminal window on Windows
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = 0
+
+            result = subprocess.run(
+                [
+                    "curl", "-s",
+                    "-X", "POST",
+                    "-H", "Content-Type: application/json",
+                    "-H", "x-api-key: " + api_key,
+                    "-H", "anthropic-version: " + _API_VERSION,
+                    "-d", body_json,
+                    _API_URL,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=60,
+                startupinfo=startupinfo,
+            )
+
+            if result.returncode != 0:
+                err = result.stderr.strip() or f"curl exited with code {result.returncode}"
                 if callback:
-                    callback(text, None)
+                    callback(None, f"Network error: {err}")
+                return
 
-        except urllib.error.HTTPError as e:
-            try:
-                err_body = json.loads(e.read().decode("utf-8"))
-                msg = err_body.get("error", {}).get("message", str(e))
-            except Exception:
-                msg = str(e)
-            if callback:
-                callback(None, f"API error {e.code}: {msg}")
+            data = json.loads(result.stdout)
 
-        except urllib.error.URLError as e:
+            # Check for API error response
+            if "error" in data:
+                msg = data["error"].get("message", str(data["error"]))
+                if callback:
+                    callback(None, f"API error: {msg}")
+                return
+
+            text = _extract_text(data)
             if callback:
-                callback(None, f"Network error: {e.reason}")
+                callback(text, None)
+
+        except subprocess.TimeoutExpired:
+            if callback:
+                callback(None, "Request timed out after 60 seconds.")
+
+        except json.JSONDecodeError:
+            if callback:
+                callback(None, f"Invalid response from API: {result.stdout[:200]}")
+
+        except FileNotFoundError:
+            if callback:
+                callback(None, "curl not found. This mod requires Windows 10 or later.")
 
         except Exception as e:
             if callback:

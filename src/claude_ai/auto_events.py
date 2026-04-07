@@ -48,16 +48,30 @@ def get_event_types():
 # Game state check
 # ---------------------------------------------------------------------------
 
+def _is_game_paused():
+    """Return True if the game clock is paused."""
+    try:
+        import services
+        from clock import ClockSpeedMode
+        clock = services.game_clock_service()
+        if clock and clock.clock_speed == ClockSpeedMode.PAUSED:
+            return True
+    except Exception:
+        pass
+    return False
+
+
 def _in_active_game():
-    """Return True only if the player is in a live household, not on a menu or loading."""
+    """Return True only if the player is in a live, unpaused household."""
     try:
         import services
         if services.current_zone() is None:
             return False
         if services.active_household() is None:
             return False
-        # Don't fire during build/buy mode
         if services.current_zone().is_in_build_buy:
+            return False
+        if _is_game_paused():
             return False
         return True
     except Exception:
@@ -107,7 +121,8 @@ def _pick_and_fire():
 # ---------------------------------------------------------------------------
 
 def _worker():
-    """Sleeps for the configured interval, then maybe fires an event."""
+    """Sleeps for the configured interval, then maybe fires an event.
+    Timer only ticks while the game is actively running (not paused)."""
     interval = get_interval_seconds()
     # Stagger the first fire so it doesn't happen immediately on load
     time.sleep(min(interval, 120))
@@ -121,12 +136,13 @@ def _worker():
                 except Exception:
                     pass
 
-        # Sleep in small chunks so we can respond to stop() quickly
+        # Sleep in small chunks; only count time when game is unpaused
         elapsed = 0
-        interval = get_interval_seconds()  # re-read each cycle in case config reloaded
+        interval = get_interval_seconds()
         while _running and elapsed < interval:
             time.sleep(5)
-            elapsed += 5
+            if not _is_game_paused():
+                elapsed += 5
 
 
 # ---------------------------------------------------------------------------

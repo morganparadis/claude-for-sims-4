@@ -139,6 +139,44 @@ def _is_ghost(sim_info):
     return False
 
 
+def find_contact_by_name(full_name):
+    """Find a specific sim by name from the protagonist's relationship network or sim manager."""
+    name_lower = full_name.lower()
+
+    # First check relationship network
+    main_si = sim_context.get_main_sim_info()
+    if main_si:
+        hh_members, relationships = sim_context.get_main_sim_network(main_si)
+        for contact in hh_members + relationships:
+            if contact["name"].lower() == name_lower:
+                return contact
+
+    # Fallback: search the sim manager directly and build a contact dict
+    try:
+        import services
+        parts = full_name.strip().split(None, 1)
+        first = parts[0].lower()
+        last = parts[1].lower() if len(parts) > 1 else ""
+
+        for si in services.sim_info_manager().values():
+            if si.first_name.lower() != first:
+                continue
+            if last and si.last_name.lower() != last:
+                continue
+            return {
+                "sim_info": si,
+                "sim_id": si.sim_id,
+                "name": f"{si.first_name} {si.last_name}".strip(),
+                "status": "",
+                "friendship": None,
+                "romance": None,
+                "in_household": False,
+            }
+    except Exception:
+        pass
+    return None
+
+
 def _pick_random_relationship_sim():
     """Pick a random non-household sim from the protagonist's relationship network."""
     main_si = sim_context.get_main_sim_info()
@@ -324,7 +362,7 @@ def get_active_conversation():
 
 
 def generate_call(callback=None, output=None):
-    """Generate an incoming phone call from a relationship sim."""
+    """Generate an incoming phone call from a random relationship sim."""
     contact = _pick_random_relationship_sim()
     if not contact:
         msg = "No relationship sims found. Set a protagonist with claude.set_main or build some relationships first."
@@ -518,4 +556,125 @@ def generate_reply(player_message, callback=None, output=None):
         system=system,
         use_fast_model=True,
         callback=_on_result,
+    )
+
+
+def send_text(contact, player_message, callback=None, output=None):
+    """
+    Send a text TO a specific sim. The player writes the message,
+    and the sim responds in character.
+    """
+    main_si = sim_context.get_main_sim_info()
+    main_name = main_si.first_name if main_si else "your Sim"
+    other_name = contact["name"]
+
+    _start_conversation(contact, "")
+    _active_conversation["history"] = [{"role": "you", "text": player_message}]
+
+    language = config.get_language()
+    system = _REPLY_SYSTEM.format(
+        language=language,
+        other_name=other_name,
+        main_name=main_name,
+    )
+    rel_desc = _describe_relationship(contact)
+    sim_history = journal.format_sim_history_for_prompt(other_name)
+    history_block = f"\n\n{sim_history}" if sim_history else ""
+    mutuals = _get_mutual_contacts(contact)
+    mutual_block = ""
+    if mutuals:
+        mutual_block = "\n\nPeople you both know:\n" + "\n".join(f"  - {m}" for m in mutuals)
+
+    prompt = (
+        f"Relationship info:\n{rel_desc}{history_block}{mutual_block}\n\n"
+        f"{main_name} just texted {other_name}: \"{player_message}\"\n\n"
+        f"Write {other_name}'s reply (1-3 short text messages)."
+    )
+
+    def _on_send_text_result(text, error):
+        if text:
+            _active_conversation["history"].append({"role": "them", "text": text})
+            journal.add_entry(
+                "text",
+                f"Text conversation with {other_name}:\n"
+                f"{main_name}: {player_message}\n"
+                f"{other_name}: {text}",
+                sim_name=other_name,
+            )
+            title = f"Reply from {other_name}"
+            sender_si = contact.get("sim_info")
+            shown = False
+            if sender_si:
+                shown = _show_phone_dialog(sender_si, title, text, ring=False)
+            if not shown:
+                notifications.show(title, text, output=output)
+        elif error:
+            notifications.show_error(error, output=output)
+        if callback:
+            callback(text, error)
+
+    return api_client.call_claude_async(
+        [{"role": "user", "content": prompt}],
+        system=system,
+        use_fast_model=True,
+        callback=_on_send_text_result,
+    )
+
+
+def send_call(contact, player_topic, callback=None, output=None):
+    """
+    Call a specific sim about a topic. The player describes what they want
+    to talk about, and the sim responds in character.
+    """
+    main_si = sim_context.get_main_sim_info()
+    main_name = main_si.first_name if main_si else "your Sim"
+    other_name = contact["name"]
+
+    _start_conversation(contact, "")
+    _active_conversation["history"] = [{"role": "you", "text": player_topic}]
+
+    language = config.get_language()
+    system = _CALL_SYSTEM.format(language=language)
+    rel_desc = _describe_relationship(contact)
+    sim_history = journal.format_sim_history_for_prompt(other_name)
+    history_block = f"\n\n{sim_history}" if sim_history else ""
+    mutuals = _get_mutual_contacts(contact)
+    mutual_block = ""
+    if mutuals:
+        mutual_block = "\n\nPeople you both know:\n" + "\n".join(f"  - {m}" for m in mutuals)
+
+    prompt = (
+        f"Person being called:\n{rel_desc}{history_block}{mutual_block}\n\n"
+        f"{main_name} is calling {other_name}. {main_name} says: \"{player_topic}\"\n\n"
+        f"Write what {other_name} says in response (3-5 lines of dialogue). "
+        f"They should react naturally to what {main_name} said."
+    )
+
+    def _on_send_call_result(text, error):
+        if text:
+            _active_conversation["history"].append({"role": "them", "text": text})
+            journal.add_entry(
+                "call",
+                f"Call with {other_name}:\n"
+                f"{main_name}: {player_topic}\n"
+                f"{other_name}: {text}",
+                sim_name=other_name,
+            )
+            title = f"Call with {other_name}"
+            caller_si = contact.get("sim_info")
+            shown = False
+            if caller_si:
+                shown = _show_phone_dialog(caller_si, title, text)
+            if not shown:
+                notifications.show(title, text, output=output)
+        elif error:
+            notifications.show_error(error, output=output)
+        if callback:
+            callback(text, error)
+
+    return api_client.call_claude_async(
+        [{"role": "user", "content": prompt}],
+        system=system,
+        use_fast_model=True,
+        callback=_on_send_call_result,
     )

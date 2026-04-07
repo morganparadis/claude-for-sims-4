@@ -79,6 +79,8 @@ try:
         output("  claude.goals                — weekly session goals")
         output("  claude.call                 — incoming call from a relationship sim")
         output("  claude.text                 — text message from a relationship sim")
+        output("  claude.sendtext First Last msg — text a specific sim")
+        output("  claude.sendcall First Last msg — call a specific sim")
         output("  claude.reply <message>      — reply to the last call or text")
         output("  claude.chat <message>       — chat about your game")
         output("  claude.set_main First Last  — set your protagonist sim")
@@ -302,6 +304,63 @@ try:
             return
         output("[Claude AI] Checking messages...")
         phone.generate_text(output=output)
+
+    @sims4.commands.Command("claude.sendtext", command_type=sims4.commands.CommandType.Live)
+    def cmd_sendtext(*args, _connection=None):
+        output = sims4.commands.CheatOutput(_connection)
+        if not _require_config(output):
+            return
+        # Parse: claude.sendtext FirstName LastName your message here
+        # Need at least a name and a message
+        if len(args) < 2:
+            output("[Claude AI] Usage: claude.sendtext <First> <Last> <message>")
+            output("[Claude AI] Example: claude.sendtext Bella Goth hey want to hang out?")
+            return
+        # Try two-word name first, then one-word
+        two_word_name = f"{args[0]} {args[1]}"
+        contact = phone.find_contact_by_name(two_word_name)
+        if contact and len(args) > 2:
+            message = " ".join(args[2:])
+        else:
+            one_word_name = args[0]
+            contact = phone.find_contact_by_name(one_word_name)
+            if contact:
+                message = " ".join(args[1:])
+            else:
+                output(f"[Claude AI] Could not find '{two_word_name}' or '{one_word_name}'.")
+                return
+        if not message:
+            output("[Claude AI] You need to include a message.")
+            return
+        output(f"[Claude AI] Texting {contact['name']}...")
+        phone.send_text(contact, message, output=output)
+
+    @sims4.commands.Command("claude.sendcall", command_type=sims4.commands.CommandType.Live)
+    def cmd_sendcall(*args, _connection=None):
+        output = sims4.commands.CheatOutput(_connection)
+        if not _require_config(output):
+            return
+        if len(args) < 2:
+            output("[Claude AI] Usage: claude.sendcall <First> <Last> <topic>")
+            output("[Claude AI] Example: claude.sendcall Bella Goth I need to tell you something")
+            return
+        two_word_name = f"{args[0]} {args[1]}"
+        contact = phone.find_contact_by_name(two_word_name)
+        if contact and len(args) > 2:
+            message = " ".join(args[2:])
+        else:
+            one_word_name = args[0]
+            contact = phone.find_contact_by_name(one_word_name)
+            if contact:
+                message = " ".join(args[1:])
+            else:
+                output(f"[Claude AI] Could not find '{two_word_name}' or '{one_word_name}'.")
+                return
+        if not message:
+            output("[Claude AI] You need to include what you want to say.")
+            return
+        output(f"[Claude AI] Calling {contact['name']}...")
+        phone.send_call(contact, message, output=output)
 
     @sims4.commands.Command("claude.reply", command_type=sims4.commands.CommandType.Live)
     def cmd_reply(*args, _connection=None):

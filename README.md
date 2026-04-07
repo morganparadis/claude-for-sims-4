@@ -67,9 +67,11 @@ Open the cheat console with `Ctrl+Shift+C`, type a command, press Enter.
 ### Phone Calls & Texts
 | Command | What it does |
 |---|---|
-| `claude.call` | Incoming phone call from a relationship sim (ring sound, caller portrait) |
-| `claude.text` | Text message from a relationship sim (buzz sound, sender portrait) |
-| `claude.reply <message>` | Reply to the last call or text — they'll respond back |
+| `claude.call` | Incoming phone call from a random relationship sim |
+| `claude.text` | Text message from a random relationship sim |
+| `claude.sendtext Bella Goth hey!` | Text a specific sim — they'll reply in character |
+| `claude.sendcall Bella Goth I have news` | Call a specific sim about a topic |
+| `claude.reply <message>` | Continue any conversation — they'll respond back |
 
 Calls and texts show as in-game phone dialogs with the sim's portrait. Click **Reply** on the popup to continue the conversation via `claude.reply`. The full conversation history is tracked, so back-and-forth exchanges stay coherent.
 

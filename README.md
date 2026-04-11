@@ -149,6 +149,7 @@ claude.auto_events off
 | `auto_event_interval_minutes` | `20` | Real-world minutes between checks |
 | `auto_event_chance` | `40` | Percent chance each check fires |
 | `auto_event_types` | `event, goals, call, text` | Content types for auto-events |
+| `auto_event_weights` | *(blank)* | Weight per type (e.g. `call:40, text:30, event:20, goals:10`). Blank = equal. |
 
 After editing the config, type `claude.reload` in-game to apply changes without restarting.
 

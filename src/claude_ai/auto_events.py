@@ -43,6 +43,24 @@ def get_event_types():
     raw = config.get_config().get("claude_ai", "auto_event_types", fallback="event,goals")
     return [t.strip().lower() for t in raw.split(",") if t.strip()]
 
+def get_event_weights():
+    """
+    Read per-type weights from config. Format: event:30, call:40, text:20, goals:10
+    If no weights are configured, all types get equal weight.
+    """
+    raw = config.get_config().get("claude_ai", "auto_event_weights", fallback="")
+    weights = {}
+    if raw.strip():
+        for part in raw.split(","):
+            part = part.strip()
+            if ":" in part:
+                name, val = part.split(":", 1)
+                try:
+                    weights[name.strip().lower()] = int(val.strip())
+                except ValueError:
+                    pass
+    return weights
+
 
 # ---------------------------------------------------------------------------
 # Game state check
@@ -83,12 +101,22 @@ def _in_active_game():
 # ---------------------------------------------------------------------------
 
 def _pick_and_fire():
-    """Choose a random event type from the configured list and fire it."""
+    """Choose a random event type using configured weights and fire it."""
     types = get_event_types()
     if not types:
         return
 
-    chosen = random.choice(types)
+    weights_map = get_event_weights()
+    if weights_map:
+        # Use configured weights (types not in weights_map get weight 0 and are skipped)
+        weighted_types = [t for t in types if weights_map.get(t, 0) > 0]
+        if not weighted_types:
+            weighted_types = types  # fallback if all weights are 0
+        w = [weights_map.get(t, 1) for t in weighted_types]
+        chosen = random.choices(weighted_types, weights=w, k=1)[0]
+    else:
+        # No weights configured — equal chance
+        chosen = random.choice(types)
 
     def on_result(text, error):
         if error:

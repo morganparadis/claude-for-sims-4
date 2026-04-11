@@ -13,6 +13,9 @@ Your events and challenges must:
 - Be immediately actionable — the player should know exactly what to do
 - Range from silly to dramatic
 - Be completable without mods or cheats (unless obviously implied)
+- ONLY reference skills, aspirations, careers, and traits that are listed in the game context. \
+  Do NOT invent skill names or aspiration milestones that don't exist in The Sims 4.
+- If a sim already has a high skill level, don't suggest leveling that skill — suggest something new.
 - Write in {language}
 
 IMPORTANT: On the very last line of your response, write MOOD: followed by the emotional \
@@ -102,7 +105,7 @@ def generate_challenge(difficulty="medium", callback=None):
         difficulty: "easy", "medium", or "hard"
         callback:   function(text, error)
     """
-    context = _get_context_block()
+    context = sim_context.build_context_string_with_journal()
     language = config.get_language()
     system = _SYSTEM.format(language=language)
 
@@ -136,7 +139,7 @@ def generate_weekly_goals(callback=None):
     """
     Generate a set of 5 goals for the player to accomplish this play session.
     """
-    context = _get_context_block()
+    context = sim_context.build_context_string_with_journal()
     language = config.get_language()
     system = _SYSTEM.format(language=language)
 

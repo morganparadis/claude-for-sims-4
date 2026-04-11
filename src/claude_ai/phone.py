@@ -285,6 +285,62 @@ def _get_mutual_contacts(contact):
     return mutuals
 
 
+def _get_sim_home_world(sim_info):
+    """Get the world/neighborhood name where a sim lives."""
+    try:
+        import services
+        household = sim_info.household
+        if household:
+            home_zone_id = household.home_zone_id
+            if home_zone_id:
+                # Try to get the region/world name from the zone
+                try:
+                    from world.region import get_region_instance_from_zone_id
+                    region = get_region_instance_from_zone_id(home_zone_id)
+                    if region:
+                        name = getattr(region, "__name__", "") or str(region)
+                        # Clean up the region name
+                        cleaned = (name
+                            .replace("Region_", "")
+                            .replace("region_", "")
+                            .replace("_", " ")
+                            .strip())
+                        if cleaned:
+                            return cleaned
+                except Exception:
+                    pass
+
+                # Fallback: try to get the lot name
+                try:
+                    persistence = services.get_persistence_service()
+                    if persistence:
+                        zone_data = persistence.get_zone_proto_buff(home_zone_id)
+                        if zone_data and zone_data.name:
+                            return zone_data.name
+                except Exception:
+                    pass
+    except Exception:
+        pass
+    return None
+
+
+def _location_context(main_si, contact):
+    """Build a short string describing where each sim lives, if known."""
+    main_home = _get_sim_home_world(main_si) if main_si else None
+    other_si = contact.get("sim_info")
+    other_home = _get_sim_home_world(other_si) if other_si else None
+
+    if main_home and other_home:
+        if main_home.lower() == other_home.lower():
+            return f" (both live in {main_home})"
+        return f" ({main_si.first_name} lives in {main_home}, {contact['name']} lives in {other_home})"
+    elif main_home:
+        return f" ({main_si.first_name} lives in {main_home})"
+    elif other_home:
+        return f" ({contact['name']} lives in {other_home})"
+    return ""
+
+
 def _describe_relationship(contact):
     """Build a detailed character description for the prompt."""
     parts = [f"Name: {contact['name']}"]
@@ -325,6 +381,11 @@ def _describe_relationship(contact):
         aspiration = sim_context.get_sim_aspiration(si)
         if aspiration:
             parts.append(f"Aspiration: {aspiration}")
+
+        # Home world — affects what they suggest doing together
+        home = _get_sim_home_world(si)
+        if home:
+            parts.append(f"Lives in: {home}")
 
     if contact.get("status"):
         parts.append(f"Relationship to your sim: {contact['status']}")
@@ -390,9 +451,11 @@ def generate_call(callback=None, output=None):
 
     prompt = (
         f"Caller info:\n{rel_desc}{history_block}{mutual_block}\n\n"
-        f"They are calling {main_name}.\n\n"
+        f"They are calling {main_name}{_location_context(main_si, contact)}.\n\n"
         f"Write what {contact['name']} says during this phone call. "
         f"If there is past interaction history, reference or build on it naturally. "
+        f"If they live in different worlds, acknowledge the distance naturally "
+        f"(e.g. ask how things are there, suggest visiting, reference their world). "
         f"Make the reason for calling feel natural given their relationship."
     )
 
@@ -449,9 +512,10 @@ def generate_text(callback=None, output=None):
 
     prompt = (
         f"Sender info:\n{rel_desc}{history_block}{mutual_block}\n\n"
-        f"They are texting {main_name}.\n\n"
+        f"They are texting {main_name}{_location_context(main_si, contact)}.\n\n"
         f"Write 1-3 text messages from {contact['name']}. "
         f"If there is past interaction history, reference or build on it naturally. "
+        f"If they live in different worlds, acknowledge the distance naturally. "
         f"Make the content feel natural given their relationship and current mood."
     )
 

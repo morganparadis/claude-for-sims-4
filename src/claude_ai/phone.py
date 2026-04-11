@@ -8,7 +8,7 @@ Players can reply with claude.reply <message> to continue the conversation.
 """
 import random
 
-from . import api_client, sim_context, config, journal, notifications
+from . import api_client, sim_context, config, journal, notifications, moodlets
 
 # Tracks the current conversation so the player can reply
 # Format: {"contact": contact_dict, "history": [{"role": "them"|"you", "text": str}, ...]}
@@ -84,7 +84,12 @@ Rules:
   gossiping, complaining, celebrating, or just checking in
 - Occasionally sprinkle in Simlish words naturally (Sul sul, Dag dag, Nooboo)
 - Never use profanity or explicit content
-- Write dialogue lines only, prefixed with the caller's first name"""
+- Write dialogue lines only, prefixed with the caller's first name
+
+IMPORTANT: On the very last line of your response, write MOOD: followed by the emotional \
+impact this call would have on the RECIPIENT. Pick exactly one: \
+happy, confident, flirty, inspired, focused, energized, playful, sad, angry, tense, \
+embarrassed, bored, uncomfortable, dazed"""
 
 _TEXT_SYSTEM = """You are writing text messages from a Sim in The Sims 4. Write in {language}.
 
@@ -104,7 +109,12 @@ Rules:
 - Write 1-3 short text messages (like real phone texts)
 - The text should have a purpose: making plans, sharing news/gossip, sending a meme description, \
   asking a question, or reacting to something
-- Never use profanity or explicit content"""
+- Never use profanity or explicit content
+
+IMPORTANT: On the very last line of your response, write MOOD: followed by the emotional \
+impact this text would have on the RECIPIENT. Pick exactly one: \
+happy, confident, flirty, inspired, focused, energized, playful, sad, angry, tense, \
+embarrassed, bored, uncomfortable, dazed"""
 
 _REPLY_SYSTEM = """You are writing text message replies from a Sim in The Sims 4. Write in {language}.
 
@@ -119,7 +129,26 @@ CRITICAL -- voice and personality:
 
 Rules:
 - Write 1-3 short text messages as {other_name}'s reply
-- Never use profanity or explicit content"""
+- Never use profanity or explicit content
+
+IMPORTANT: On the very last line of your response, write MOOD: followed by the emotional \
+impact this reply would have on {main_name}. Pick exactly one: \
+happy, confident, flirty, inspired, focused, energized, playful, sad, angry, tense, \
+embarrassed, bored, uncomfortable, dazed"""
+
+
+def _apply_mood_from_text(text):
+    """Extract MOOD tag from text, apply the moodlet to protagonist, return cleaned text."""
+    clean_text, mood_tag = moodlets.extract_mood_tag(text)
+    if mood_tag:
+        main_si = sim_context.get_main_sim_info()
+        if not main_si:
+            active = sim_context.get_active_sim()
+            if active:
+                main_si = active.sim_info
+        if main_si:
+            moodlets.apply_mood(main_si, mood_tag)
+    return clean_text
 
 
 def _is_ghost(sim_info):
@@ -462,6 +491,7 @@ def generate_call(callback=None, output=None):
     def _on_result(text, error):
         title = f"Call from {contact['name']}"
         if text:
+            text = _apply_mood_from_text(text)
             _start_conversation(contact, text)
             journal.add_entry("call", f"Call from {contact['name']}:\n{text}", sim_name=contact["name"])
             caller_si = contact.get("sim_info")
@@ -522,6 +552,7 @@ def generate_text(callback=None, output=None):
     def _on_result(text, error):
         title = f"Text from {contact['name']}"
         if text:
+            text = _apply_mood_from_text(text)
             _start_conversation(contact, text)
             journal.add_entry("text", f"Text from {contact['name']}:\n{text}", sim_name=contact["name"])
             sender_si = contact.get("sim_info")
@@ -591,8 +622,8 @@ def generate_reply(player_message, callback=None, output=None):
 
     def _on_result(text, error):
         if text:
+            text = _apply_mood_from_text(text)
             history.append({"role": "them", "text": text})
-            # Save the exchange to journal
             journal.add_entry(
                 "text",
                 f"Conversation with {other_name}:\n"
@@ -657,6 +688,7 @@ def send_text(contact, player_message, callback=None, output=None):
 
     def _on_send_text_result(text, error):
         if text:
+            text = _apply_mood_from_text(text)
             _active_conversation["history"].append({"role": "them", "text": text})
             journal.add_entry(
                 "text",
@@ -716,6 +748,7 @@ def send_call(contact, player_topic, callback=None, output=None):
 
     def _on_send_call_result(text, error):
         if text:
+            text = _apply_mood_from_text(text)
             _active_conversation["history"].append({"role": "them", "text": text})
             journal.add_entry(
                 "call",

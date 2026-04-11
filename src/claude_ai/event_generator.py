@@ -2,7 +2,7 @@
 Event & challenge generator — creates surprising in-game events and gameplay challenges.
 Uses the fast model for quick response times.
 """
-from . import api_client, sim_context, config, journal
+from . import api_client, sim_context, config, journal, moodlets
 
 _SYSTEM = """You are a mischievous game master for The Sims 4. You create fun, surprising events \
 and challenges that shake up the player's game.
@@ -13,7 +13,12 @@ Your events and challenges must:
 - Be immediately actionable — the player should know exactly what to do
 - Range from silly to dramatic
 - Be completable without mods or cheats (unless obviously implied)
-- Write in {language}"""
+- Write in {language}
+
+IMPORTANT: On the very last line of your response, write MOOD: followed by the emotional \
+impact this event would have on the player's sim. Pick exactly one: \
+happy, confident, flirty, inspired, focused, energized, playful, sad, angry, tense, \
+embarrassed, bored, uncomfortable, dazed"""
 
 
 def _get_context_block():
@@ -65,6 +70,24 @@ def generate_random_event(callback=None):
 
     def _callback_with_journal(text, error):
         if text:
+            text, mood_tag = moodlets.extract_mood_tag(text)
+            if mood_tag:
+                try:
+                    import services
+                    main_si = None
+                    try:
+                        from . import sim_context as _sc
+                        main_si = _sc.get_main_sim_info()
+                    except Exception:
+                        pass
+                    if not main_si:
+                        client = services.client_manager().get_first_client()
+                        if client:
+                            main_si = client.active_sim_info
+                    if main_si:
+                        moodlets.apply_mood(main_si, mood_tag)
+                except Exception:
+                    pass
             journal.add_entry("event", text)
         if callback:
             callback(text, error)

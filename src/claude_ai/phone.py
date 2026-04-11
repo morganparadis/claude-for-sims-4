@@ -98,8 +98,12 @@ CRITICAL -- voice and personality:
 - Every sim texts differently. A Geek uses different emoji than a Bro.
 - Teens: abbreviations, lots of emoji, dramatic, lowercase. "omggg no way 😭😭"
 - Young Adults: mix of casual and articulate. "hey are you free tonight?"
-- Adults: more complete sentences, less emoji. "Hi! Are you around this weekend?"
-- Elders: formal, sometimes confused by texting. "Dear [name], I hope this message finds you."
+- Adults: complete sentences, proper punctuation, minimal emoji. They text like adults — \
+  not hip, not stiff, just normal. "Hi! Wanted to check in. Are you free this weekend?"
+- Elders: formal, warm, sometimes overly detailed. May over-explain or write like an email. \
+  "Hello dear, I hope you're doing well. I was thinking of you and wanted to reach out."
+- A PARENT texting their CHILD sounds like a parent — caring, maybe overbearing, \
+  maybe proud. NOT like a friend or peer.
 - Hot-Headed: caps lock, exclamation marks. Gloomy: ellipses, sad emoji.
 - Snob: proper grammar, condescending. Goofball: random, memes, lol.
 - Romantic: hearts, flirty. Loner: terse, minimal. Evil: passive aggressive.
@@ -370,6 +374,97 @@ def _location_context(main_si, contact):
     return ""
 
 
+def _get_family_relationship(other_si, contact):
+    """
+    Try to determine the precise family relationship between the protagonist
+    and the other sim using genealogy tracker and relationship bits.
+    Returns a string like "Father", "Daughter", "Sibling" or None.
+    """
+    main_si = sim_context.get_main_sim_info()
+    if not main_si or not other_si:
+        return None
+
+    # Try genealogy tracker first — most precise
+    try:
+        from sims.genealogy_tracker import FamilyRelationshipIndex
+        gen = main_si.genealogy
+        if gen:
+            # Check if other_si is a parent
+            for parent_idx in (FamilyRelationshipIndex.MOTHER, FamilyRelationshipIndex.FATHER):
+                try:
+                    parent_id = gen.get_family_relationship(parent_idx)
+                    if parent_id == other_si.sim_id:
+                        gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
+                        return "Father" if gender == "MALE" else "Mother"
+                except Exception:
+                    pass
+
+        # Check if protagonist is a parent of other_si
+        other_gen = other_si.genealogy
+        if other_gen:
+            for parent_idx in (FamilyRelationshipIndex.MOTHER, FamilyRelationshipIndex.FATHER):
+                try:
+                    parent_id = other_gen.get_family_relationship(parent_idx)
+                    if parent_id == main_si.sim_id:
+                        gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
+                        return "Son" if gender == "MALE" else "Daughter"
+                except Exception:
+                    pass
+
+        # Check for siblings (share a parent)
+        if gen and other_gen:
+            try:
+                for idx in (FamilyRelationshipIndex.MOTHER, FamilyRelationshipIndex.FATHER):
+                    my_parent = gen.get_family_relationship(idx)
+                    their_parent = other_gen.get_family_relationship(idx)
+                    if my_parent and my_parent == their_parent:
+                        gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
+                        return "Brother" if gender == "MALE" else "Sister"
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    # Fallback: check relationship bits for family keywords
+    try:
+        rt = main_si.relationship_tracker
+        bits = rt.get_all_bits(other_si.sim_id)
+        if bits:
+            for bit in bits:
+                bn = sim_context._get_trait_name(bit)
+                bn_lower = bn.lower()
+                if "parent" in bn_lower:
+                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
+                    return "Father" if gender == "MALE" else "Mother"
+                if "child" in bn_lower or "offspring" in bn_lower:
+                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
+                    return "Son" if gender == "MALE" else "Daughter"
+                if "sibling" in bn_lower:
+                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
+                    return "Brother" if gender == "MALE" else "Sister"
+                if "grandparent" in bn_lower:
+                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
+                    return "Grandfather" if gender == "MALE" else "Grandmother"
+                if "grandchild" in bn_lower:
+                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
+                    return "Grandson" if gender == "MALE" else "Granddaughter"
+                if "spouse" in bn_lower or "married" in bn_lower:
+                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
+                    return "Husband" if gender == "MALE" else "Wife"
+                if "uncle" in bn_lower or "aunt" in bn_lower:
+                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
+                    return "Uncle" if gender == "MALE" else "Aunt"
+                if "cousin" in bn_lower:
+                    return "Cousin"
+                if "niece" in bn_lower or "nephew" in bn_lower:
+                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
+                    return "Nephew" if gender == "MALE" else "Niece"
+    except Exception:
+        pass
+
+    return None
+
+
 def _describe_relationship(contact):
     """Build a detailed character description for the prompt."""
     parts = [f"Name: {contact['name']}"]
@@ -416,8 +511,19 @@ def _describe_relationship(contact):
         if home:
             parts.append(f"Lives in: {home}")
 
+    # Family relationship — check genealogy for precise label
+    family_label = _get_family_relationship(si, contact) if si else None
+    if family_label:
+        parts.append(f"Family relationship: {family_label}")
+
     if contact.get("status"):
-        parts.append(f"Relationship to your sim: {contact['status']}")
+        # Don't repeat if family label already covers it
+        status = contact['status']
+        if not family_label:
+            parts.append(f"Relationship to your sim: {status}")
+        elif status and not any(kw in status for kw in ("Family", "Parent", "Child", "Sibling")):
+            # Include non-family bits alongside family label (e.g. also Friends)
+            parts.append(f"Also: {status}")
     if contact.get("friendship") is not None:
         parts.append(f"Friendship level: {contact['friendship']}")
     if contact.get("romance") is not None:

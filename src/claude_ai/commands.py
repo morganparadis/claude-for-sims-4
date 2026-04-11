@@ -23,6 +23,8 @@ COMMANDS:
 
 try:
     import sims4.commands
+    import sims4.resources
+    import services
     from . import config, sim_context, dialogue, storyteller, event_generator, notifications, api_client, auto_events, journal, phone
 
     # -------------------------------------------------------------------------
@@ -536,18 +538,44 @@ try:
     @sims4.commands.Command("claude.testbuffs", command_type=sims4.commands.CommandType.Live)
     def cmd_testbuffs(_connection=None):
         output = sims4.commands.CheatOutput(_connection)
-        output("[buff] testing...")
+        buff_mgr = services.get_instance_manager(sims4.resources.Types.BUFF)
+        # Try .types dict (what MCCC uses)
+        try:
+            types_dict = buff_mgr.types
+            output("types count: " + str(len(types_dict)))
+            count = 0
+            for bid, btype in types_dict.items():
+                bn = type(btype).__name__
+                if "happy" in bn.lower() and count < 5:
+                    output("  " + str(bid) + " " + bn)
+                    count += 1
+        except BaseException as e:
+            output("types failed: " + str(e))
+        # Try getting MCCC's known IDs and applying
         si = sim_context.get_main_sim_info()
         if not si:
             active = sim_context.get_active_sim()
             if active:
                 si = active.sim_info
-        if not si:
-            output("[buff] no sim found")
-            return
-        from . import moodlets
-        result = moodlets.apply_mood(si, "happy")
-        output("[buff] happy: " + str(result))
+        if si:
+            # Try a bunch of known buff IDs
+            for bid in (27738, 28389, 103481, 24858, 32424):
+                bt = buff_mgr.get(bid)
+                if bt:
+                    output("found id " + str(bid) + ": " + type(bt).__name__)
+                    try:
+                        si.debug_add_buff_by_type(bt)
+                        output("debug_add OK for " + str(bid))
+                    except BaseException as e1:
+                        output("debug_add fail: " + str(e1))
+                    try:
+                        si.add_buff_from_op(bt, buff_reason=None)
+                        output("add_from_op OK for " + str(bid))
+                    except BaseException as e2:
+                        output("add_from_op fail: " + str(e2))
+                    break
+            else:
+                output("no known IDs found")
 
     # -------------------------------------------------------------------------
     # Journal

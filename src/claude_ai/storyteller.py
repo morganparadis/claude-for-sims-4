@@ -29,11 +29,10 @@ def generate_story_update(callback=None):
 
     prompt = (
         f"{context}\n\n"
-        "Write a 2–3 paragraph story update for this household. "
-        "If there is journal history above, continue the story naturally from where it left off. "
-        "Describe what's probably happening in their lives right now, highlight interesting "
-        "character dynamics or tensions, and hint at what drama might unfold next. "
-        "Write it like a chapter entry in a Sims story blog — personal, vivid, and fun."
+        "Write a SHORT story update for this household (1 short paragraph, max 4-5 sentences). "
+        "Must fit in a small popup window. "
+        "If there is journal history above, continue from where it left off. "
+        "Vivid and fun — what's happening now and what drama might unfold next."
     )
 
     def _callback_with_journal(text, error):
@@ -72,16 +71,13 @@ def generate_relationship_drama(sim1_name=None, sim2_name=None, callback=None):
 
     prompt = (
         f"{context}\n\n"
-        f"Write a dramatic relationship story arc between {name1} and {name2}. "
-        "This could be romantic tension, a long-simmering rivalry, a family betrayal, "
-        "or a budding friendship with complications. "
-        "If there is journal history above, make this arc feel continuous with past events.\n\n"
-        "Include:\n"
-        "THE SITUATION: [What's going on between them right now]\n"
-        "THE CONFLICT: [What's driving them apart or creating tension]\n"
-        "THE TURNING POINT: [A dramatic moment that changes everything]\n"
-        "POSSIBLE ENDINGS: [Two different ways this could resolve — one happy, one bittersweet]\n"
-        "HOW TO PLAY IT: [2–3 specific gameplay actions to enact this drama]"
+        f"Write a short dramatic arc between {name1} and {name2}. "
+        "If there is journal history above, build on past events.\n\n"
+        "Keep it SHORT — must fit in a small popup window. Max 6 lines.\n\n"
+        "Format:\n"
+        "DRAMA: [Catchy title]\n"
+        "[2-3 sentences: the situation, the conflict, what might happen next]\n"
+        "PLAY IT: [1-2 specific gameplay actions]"
     )
 
     def _callback_with_journal(text, error):

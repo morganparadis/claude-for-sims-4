@@ -173,7 +173,7 @@ happy, confident, flirty, inspired, focused, energized, playful, sad, angry, ten
 embarrassed, bored, uncomfortable, dazed"""
 
 
-def _apply_mood_from_text(text):
+def _apply_mood_from_text(text, reason=None):
     """Extract MOOD tag from text, apply the moodlet to protagonist, return cleaned text."""
     clean_text, mood_tag = moodlets.extract_mood_tag(text)
     if mood_tag:
@@ -183,7 +183,7 @@ def _apply_mood_from_text(text):
             if active:
                 main_si = active.sim_info
         if main_si:
-            moodlets.apply_mood(main_si, mood_tag)
+            moodlets.apply_mood(main_si, mood_tag, reason=reason)
     return clean_text
 
 
@@ -629,7 +629,7 @@ def generate_call(callback=None, output=None):
     def _on_result(text, error):
         title = f"Call from {contact['name']}"
         if text:
-            text = _apply_mood_from_text(text)
+            text = _apply_mood_from_text(text, reason="Call from " + contact["name"])
             _start_conversation(contact, text)
             journal.add_entry("call", f"Call from {contact['name']}:\n{text}", sim_name=contact["name"])
             caller_si = contact.get("sim_info")
@@ -690,7 +690,7 @@ def generate_text(callback=None, output=None):
     def _on_result(text, error):
         title = f"Text from {contact['name']}"
         if text:
-            text = _apply_mood_from_text(text)
+            text = _apply_mood_from_text(text, reason="Text from " + contact["name"])
             _start_conversation(contact, text)
             journal.add_entry("text", f"Text from {contact['name']}:\n{text}", sim_name=contact["name"])
             sender_si = contact.get("sim_info")
@@ -760,7 +760,7 @@ def generate_reply(player_message, callback=None, output=None):
 
     def _on_result(text, error):
         if text:
-            text = _apply_mood_from_text(text)
+            text = _apply_mood_from_text(text, reason="Reply from " + other_name)
             history.append({"role": "them", "text": text})
             journal.add_entry(
                 "text",
@@ -826,7 +826,7 @@ def send_text(contact, player_message, callback=None, output=None):
 
     def _on_send_text_result(text, error):
         if text:
-            text = _apply_mood_from_text(text)
+            text = _apply_mood_from_text(text, reason="Text from " + other_name)
             _active_conversation["history"].append({"role": "them", "text": text})
             journal.add_entry(
                 "text",
@@ -886,7 +886,7 @@ def send_call(contact, player_topic, callback=None, output=None):
 
     def _on_send_call_result(text, error):
         if text:
-            text = _apply_mood_from_text(text)
+            text = _apply_mood_from_text(text, reason="Call with " + other_name)
             _active_conversation["history"].append({"role": "them", "text": text})
             journal.add_entry(
                 "call",

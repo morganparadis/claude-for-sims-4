@@ -55,17 +55,11 @@ def generate_random_event(callback=None):
     prompt = (
         f"{context}\n\n"
         "Generate ONE surprising random event for this household right now. "
-        "If there is journal history above, make this event feel connected to past events "
-        "rather than completely out of nowhere.\n\n"
+        "If there is journal history above, make this event feel connected to past events.\n\n"
+        "Keep it SHORT — must fit in a small popup window. No more than 4-5 lines total.\n\n"
         "Format exactly as:\n"
         "EVENT: [Catchy name]\n"
-        "WHAT HAPPENED: [2–3 sentences describing the event]\n"
-        "IMMEDIATE ACTION: [Exactly what the player should do right now]\n"
-        "TWIST: [An optional complication or surprise that could follow]\n\n"
-        "Event ideas to draw from (pick something creative, don't use these verbatim):\n"
-        "unexpected visitor, secret inheritance, neighborhood drama, skill breakthrough, "
-        "career crisis, relationship revelation, mysterious object, strange dream, "
-        "neighborhood feud, surprise party, hidden talent discovered, old flame returns"
+        "[2-3 sentences: what happened and what the player should do now]"
     )
 
     def _callback_with_journal(text, error):
@@ -122,15 +116,12 @@ def generate_challenge(difficulty="medium", callback=None):
     prompt = (
         f"{context}\n\n"
         f"Create a {difficulty.upper()} difficulty gameplay challenge. {note}\n\n"
+        "Keep it SHORT — must fit in a small popup window. No more than 6 lines total.\n\n"
         "Format exactly as:\n"
-        f"CHALLENGE: [Name] ({difficulty.title()} Difficulty)\n"
-        "OBJECTIVE: [The main goal in 1–2 sentences]\n"
-        "RULES:\n"
-        "• [Rule 1]\n"
-        "• [Rule 2]\n"
-        "• [Rule 3]\n"
-        "WIN CONDITION: [How to officially complete the challenge]\n"
-        "BONUS GOAL: [An optional harder objective for extra bragging rights]"
+        f"CHALLENGE: [Name] ({difficulty.title()})\n"
+        "[1 sentence objective]\n"
+        "Rules: [2-3 short rules on one line each]\n"
+        "Win: [How to complete it]"
     )
 
     return api_client.call_claude_async(
@@ -151,16 +142,13 @@ def generate_weekly_goals(callback=None):
 
     prompt = (
         f"{context}\n\n"
-        "Generate 5 fun weekly goals for this household's current play session. "
-        "Mix easy, medium, and one stretch goal.\n\n"
+        "Generate 3 fun goals for this play session. Keep each one SHORT (1 line).\n\n"
+        "Must fit in a small popup window.\n\n"
         "Format as:\n"
-        "THIS WEEK'S GOALS:\n"
+        "GOALS:\n"
         "1. [Easy goal]\n"
-        "2. [Easy/medium goal]\n"
-        "3. [Medium goal]\n"
-        "4. [Medium/hard goal]\n"
-        "5. ⭐ STRETCH: [Ambitious goal]\n\n"
-        "Each goal should reference specific Sims 4 mechanics and be completable in one session."
+        "2. [Medium goal]\n"
+        "3. [Stretch goal]"
     )
 
     return api_client.call_claude_async(

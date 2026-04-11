@@ -1,40 +1,38 @@
 """
 Moodlet system — applies emotional buffs to your sim based on AI-generated content.
 
-After Claude generates a call, text, or event, it tags the emotional tone.
-This module maps that tone to a base-game buff and applies it.
+Uses add_buff_from_op (the same method S4CL uses) instead of debug_add_buff_by_type.
 """
 
-# Base game buff tuning IDs for each mood.
-# These are the generic "social" or "phone" themed buffs where available.
-_MOOD_BUFFS = {
-    "happy":      27738,   # Buff_Happy_Generic
-    "confident":  27131,   # Buff_Confident_Generic
-    "flirty":     27468,   # Buff_Flirty_Generic
-    "inspired":   27503,   # Buff_Inspired_Generic
-    "focused":    27453,   # Buff_Focused_Generic
-    "energized":  27400,   # Buff_Energized_Generic
-    "playful":    27954,   # Buff_Playful_Generic
-    "sad":        28173,   # Buff_Sad_Generic
-    "angry":      26818,   # Buff_Angry_Generic
-    "tense":      28356,   # Buff_Tense_Generic
-    "embarrassed": 27363,  # Buff_Embarrassed_Generic
-    "bored":      27049,   # Buff_Bored_Generic
-    "uncomfortable": 28395,# Buff_Uncomfortable_Generic
-    "dazed":      27167,   # Buff_Dazed_Generic
+# Confirmed buff IDs from S4CL (Alien Empathy Emotion buffs — work on all sims)
+_MOOD_BUFF_IDS = {
+    "happy":        103481,
+    "sad":          103478,
+    "angry":        103474,
+    "confident":    103487,
+    "flirty":       103483,
+    "inspired":     103480,
+    "focused":      103482,
+    "energized":    103484,
+    "playful":      103479,
+    "uncomfortable":103476,
+    "embarrassed":  103485,
+    "bored":        103475,
+    "dazed":        103486,
+    "tense":        103477,
 }
 
 
 def apply_mood(sim_info, mood_tag):
     """
     Apply a moodlet buff to a sim based on a mood tag string.
-    Returns True on success, False if the mood is unknown or buff fails.
+    Returns True on success.
     """
     if not mood_tag:
         return False
 
     mood_key = mood_tag.strip().lower()
-    buff_id = _MOOD_BUFFS.get(mood_key)
+    buff_id = _MOOD_BUFF_IDS.get(mood_key)
     if not buff_id:
         return False
 
@@ -42,13 +40,25 @@ def apply_mood(sim_info, mood_tag):
         import services
         import sims4.resources
         buff_manager = services.get_instance_manager(sims4.resources.Types.BUFF)
+        if not buff_manager:
+            return False
         buff_type = buff_manager.get(buff_id)
         if not buff_type:
+            # ID didn't work — try searching by name
+            target = mood_key
+            for b in buff_manager.all_instances_gen():
+                bn = type(b).__name__.lower()
+                if target in bn and ("mood" in bn or "generic" in bn):
+                    buff_type = b
+                    break
+        if not buff_type:
             return False
-        sim_info.debug_add_buff_by_type(buff_type)
+        sim_info.add_buff_from_op(buff_type, buff_reason=None)
         return True
-    except Exception:
-        return False
+    except BaseException:
+        pass
+
+    return False
 
 
 def extract_mood_tag(text):
@@ -60,7 +70,6 @@ def extract_mood_tag(text):
     if not text:
         return text, None
 
-    # Look for MOOD: tag on the last line
     lines = text.rstrip().split("\n")
     last_line = lines[-1].strip()
 

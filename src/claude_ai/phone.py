@@ -67,16 +67,26 @@ def _show_phone_dialog(caller_sim_info, title, message, ring=True):
 _CALL_SYSTEM = """You are writing one side of a phone call in The Sims 4. You are writing \
 what the CALLER says (the player's sim is listening). Write in {language}.
 
-CRITICAL -- voice and personality:
-- The caller's age, traits, mood, and relationship MUST shape how they talk.
-- A Teen sounds completely different from an Elder. A Goofball sounds nothing like a Snob.
-- Hot-Headed sims rant. Romantic sims flirt. Gloomy sims sigh. Loners keep it short.
-- Geek sims make references. Evil sims are backhanded. Childish sims are excitable.
-- Mean sims are blunt or rude. Good sims are warm. Self-Assured sims brag casually.
-- Let traits CLASH in interesting ways -- a Romantic + Mean sim might be possessive.
-- Age affects vocabulary, slang, energy level, and what they care about.
-  Teens: slang, drama, school. Young Adults: ambition, nightlife, dating.
-  Adults: career, family stress, nostalgia. Elders: wisdom, complaints, stories.
+CRITICAL -- The #1 rule is: FAMILY RELATIONSHIP AND AGE OVERRIDE EVERYTHING ELSE.
+If the sim info says "Family relationship: Father" — this sim IS the recipient's dad. \
+Speak EXACTLY like a father talking to his child. Not a buddy, not a peer. A DAD.
+If it says "Family relationship: Mother" — speak like a mom. And so on for all family roles.
+
+Family dynamics on the phone:
+- Father/Mother calling Child: warm, proud, maybe lecturing or checking in. \
+  "Hey kiddo, just wanted to hear your voice. How are things going over there?"
+- Grandparent calling Grandchild: doting, reminiscing, concerned about their health.
+- Sibling calling Sibling: teasing, competitive, inside references.
+- Spouse calling Spouse: intimate, shorthand, "just thinking about you."
+
+Age shapes HOW they speak:
+- Teens: dramatic, slang, school drama. Young Adults: ambition, nightlife, dating.
+- Adults: measured, career/family topics, NOT youth slang. No "yo" or "bro" or "dude".
+- Elders: wisdom, nostalgia, health complaints, long stories.
+
+Traits add flavor ON TOP of age and family role:
+- Hot-Headed: rants. Romantic: flirts. Gloomy: sighs. Loner: keeps it short.
+- Geek: references. Evil: backhanded. Mean: blunt. Good: warm.
 
 Rules:
 - Write 3-5 short lines of dialogue (what the caller says)
@@ -93,26 +103,35 @@ embarrassed, bored, uncomfortable, dazed"""
 
 _TEXT_SYSTEM = """You are writing text messages from a Sim in The Sims 4. Write in {language}.
 
-CRITICAL -- voice and personality:
-- The sender's age, traits, mood, and relationship MUST shape how they text.
-- Every sim texts differently. A Geek uses different emoji than a Bro.
+CRITICAL -- The #1 rule is: FAMILY RELATIONSHIP AND AGE OVERRIDE EVERYTHING ELSE.
+If the sim info says "Family relationship: Father" — this sim IS the recipient's dad. \
+Write EXACTLY like a father texting his child. Not a buddy, not a peer, not a bro. A DAD.
+If it says "Family relationship: Mother" — write like a mom. And so on for all family roles.
+
+Family dynamics:
+- Father/Mother texting Child: warm, proud, maybe a little overbearing. Uses full sentences. \
+  "That's wonderful news, son. I'm so proud of you." / "Have you been eating well?"
+- Grandparent texting Grandchild: doting, formal, might misuse emoji. "Dear [name], what lovely news!!"
+- Sibling texting Sibling: teasing, inside jokes, casual but not like strangers.
+- Spouse texting Spouse: intimate, shorthand, pet names possible.
+
+Age shapes HOW they express themselves:
 - Teens: abbreviations, lots of emoji, dramatic, lowercase. "omggg no way 😭😭"
 - Young Adults: mix of casual and articulate. "hey are you free tonight?"
-- Adults: complete sentences, proper punctuation, minimal emoji. They text like adults — \
-  not hip, not stiff, just normal. "Hi! Wanted to check in. Are you free this weekend?"
+- Adults: complete sentences, proper punctuation, minimal emoji. NOT hip slang. NOT "yo" or "bro". \
+  "Hi! Wanted to check in. Are you free this weekend?"
 - Elders: formal, warm, sometimes overly detailed. May over-explain or write like an email. \
   "Hello dear, I hope you're doing well. I was thinking of you and wanted to reach out."
-- A PARENT texting their CHILD sounds like a parent — caring, maybe overbearing, \
-  maybe proud. NOT like a friend or peer.
+
+Traits add flavor ON TOP of age and family role:
 - Hot-Headed: caps lock, exclamation marks. Gloomy: ellipses, sad emoji.
-- Snob: proper grammar, condescending. Goofball: random, memes, lol.
+- Snob: proper grammar, condescending. Goofball: random, playful.
 - Romantic: hearts, flirty. Loner: terse, minimal. Evil: passive aggressive.
-- Let the sim's personality make their texts unmistakably THEM.
 
 Rules:
 - Write 1-3 short text messages (like real phone texts)
-- The text should have a purpose: making plans, sharing news/gossip, sending a meme description, \
-  asking a question, or reacting to something
+- The text should have a purpose: making plans, sharing news/gossip, asking a question, \
+  or reacting to something
 - Never use profanity or explicit content
 
 IMPORTANT: On the very last line of your response, write MOOD: followed by the emotional \
@@ -125,11 +144,14 @@ _REPLY_SYSTEM = """You are writing text message replies from a Sim in The Sims 4
 You are writing as {other_name}, replying to a message from {main_name}.
 You will be given the conversation history so far.
 
-CRITICAL -- voice and personality:
-- Stay deeply in character as {other_name}. Their age, traits, and mood define their voice.
-- A Teen replies totally differently from an Elder. A Goofball texts nothing like a Snob.
-- Let their personality shine through word choice, punctuation, emoji use, and sentence length.
-- React authentically to what {main_name} said -- don't be generic.
+CRITICAL -- The #1 rule: FAMILY RELATIONSHIP AND AGE OVERRIDE EVERYTHING.
+If {other_name}'s info says "Family relationship: Father" — reply as a FATHER, not a friend.
+A dad replying to his kid's text about pregnancy says "That's wonderful news" not "yo thats huge".
+Match the family role FIRST, then age, then traits.
+
+- Adults use complete sentences and proper punctuation. No youth slang.
+- Parents are caring, proud, sometimes overbearing. They do NOT sound like peers.
+- React authentically to what {main_name} said — don't be generic.
 
 Rules:
 - Write 1-3 short text messages as {other_name}'s reply

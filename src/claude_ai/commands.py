@@ -515,6 +515,68 @@ try:
         result = notifications._show_game_notification("Claude AI Test", "If you see this popup, notifications work!")
         output(f"[Debug] Notification result: {result}")
 
+        output("[Debug] Use claude.debug_sim <First> <Last> to see a sim's prompt context")
+        output("[Debug] Use claude.debug_buffs to test the moodlet system")
+
+    @sims4.commands.Command("claude.debug_sim", command_type=sims4.commands.CommandType.Live)
+    def cmd_debug_sim(first_name: str = None, last_name: str = None, _connection=None):
+        output = sims4.commands.CheatOutput(_connection)
+        if not first_name:
+            output("[Claude AI] Usage: claude.debug_sim <First> <Last>")
+            return
+        full_name = f"{first_name} {last_name}".strip() if last_name else first_name
+        contact = phone.find_contact_by_name(full_name)
+        if not contact:
+            output(f"[Claude AI] Could not find '{full_name}'.")
+            return
+        desc = phone._describe_relationship(contact)
+        output(f"=== Prompt context for {contact['name']} ===")
+        output(desc)
+
+    @sims4.commands.Command("claude.debug_buffs", command_type=sims4.commands.CommandType.Live)
+    def cmd_debug_buffs(_connection=None):
+        output = sims4.commands.CheatOutput(_connection)
+        try:
+            import services
+            import sims4.resources
+            buff_mgr = services.get_instance_manager(sims4.resources.Types.BUFF)
+            output(f"[Debug] Buff manager type: {type(buff_mgr).__name__}")
+
+            test_buff = buff_mgr.get(27738)
+            output(f"[Debug] buff_mgr.get(27738): {test_buff}")
+
+            try:
+                count = 0
+                mood_buffs = []
+                for b in buff_mgr.all_instances_gen():
+                    count += 1
+                    bn = type(b).__name__
+                    bn_lower = bn.lower()
+                    if any(m in bn_lower for m in ('happy', 'confident', 'flirty', 'angry', 'sad', 'embarrass', 'inspir')):
+                        if len(mood_buffs) < 15:
+                            bid = getattr(b, 'guid64', None)
+                            mood_buffs.append(f"{bn} id={bid}")
+                output(f"[Debug] Total buffs: {count}")
+                for mb in mood_buffs:
+                    output(f"[Debug]   {mb}")
+            except Exception as e:
+                output(f"[Debug] all_instances_gen error: {e}")
+
+            # Try applying
+            main_si = sim_context.get_main_sim_info()
+            if not main_si:
+                active = sim_context.get_active_sim()
+                if active:
+                    main_si = active.sim_info
+            if main_si:
+                from . import moodlets
+                result = moodlets.apply_mood(main_si, "happy")
+                output(f"[Debug] apply_mood('happy'): {result}")
+            else:
+                output("[Debug] No sim to test buff on")
+        except Exception as e:
+            output(f"[Debug] Error: {type(e).__name__}: {e}")
+
     # -------------------------------------------------------------------------
     # Journal
     # -------------------------------------------------------------------------

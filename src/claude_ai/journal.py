@@ -5,8 +5,8 @@ so Claude can reference past events across play sessions.
 The journal file lives in the same folder as claude_config.cfg (your Mods folder):
   ClaudeAI_Journal.json
 
-Recent entries are automatically included in story, event, and chat prompts
-so Claude builds on what's already happened rather than starting fresh each time.
+Uses an in-memory cache so the file is only read from disk once, then kept in
+memory. Writes still go to disk immediately for persistence.
 """
 
 import datetime
@@ -20,31 +20,42 @@ _MAX_ENTRIES = 150          # entries kept on disk before oldest are pruned
 _PROMPT_ENTRIES = 6         # how many recent entries to include in prompts
 _PREVIEW_CHARS = 220        # max chars per entry shown in prompts
 
+# In-memory cache — loaded once, kept in sync with disk
+_cache = None
+
 
 def _journal_path():
     cfg = config._find_config_file()
     if cfg:
         return os.path.join(os.path.dirname(cfg), _JOURNAL_FILENAME)
-    # Fallback: two levels up from this file (src/claude_ai/ → project root)
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", _JOURNAL_FILENAME)
 
 
 def _load():
+    """Load from disk only if cache is empty, otherwise return cache."""
+    global _cache
+    if _cache is not None:
+        return _cache
     path = _journal_path()
     if not os.path.exists(path):
-        return []
+        _cache = []
+        return _cache
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-            return data if isinstance(data, list) else []
+            _cache = data if isinstance(data, list) else []
     except Exception:
-        return []
+        _cache = []
+    return _cache
 
 
 def _save(entries):
+    """Write to disk and update cache."""
+    global _cache
+    trimmed = entries[-_MAX_ENTRIES:]
+    _cache = trimmed
     path = _journal_path()
     try:
-        trimmed = entries[-_MAX_ENTRIES:]
         with open(path, "w", encoding="utf-8") as f:
             json.dump(trimmed, f, indent=2, ensure_ascii=False)
     except Exception:
@@ -111,7 +122,7 @@ def format_for_prompt(n=_PROMPT_ENTRIES):
         sim_part = f" [{e['sim']}]" if e.get("sim") else ""
         preview = e.get("content", "").replace("\n", " ").strip()[:_PREVIEW_CHARS]
         if len(e.get("content", "")) > _PREVIEW_CHARS:
-            preview += "…"
+            preview += "..."
 
         lines.append(f"  [{date_str}] {label}{sim_part}: {preview}")
 

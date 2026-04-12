@@ -497,6 +497,70 @@ def _get_family_relationship(other_si, contact):
     return None
 
 
+def _get_protagonist_relationships():
+    """
+    Build a summary of the protagonist's key relationships so Claude knows
+    who is whose spouse, parent, child, etc.
+    Returns a string like:
+      "Your sim (Morgan) is: Vivian's Husband, Jake's Father, ..."
+    """
+    main_si = sim_context.get_main_sim_info()
+    if not main_si:
+        return ""
+
+    main_name = main_si.first_name
+    relations = []
+
+    try:
+        rt = main_si.relationship_tracker
+        import services
+        sm = services.sim_info_manager()
+
+        for target_id in rt.target_sim_gen():
+            other_si = sm.get(target_id)
+            if not other_si:
+                continue
+            other_name = other_si.first_name + " " + other_si.last_name
+
+            # Check family bits
+            label = None
+            try:
+                bits = rt.get_all_bits(target_id)
+                if bits:
+                    for bit in bits:
+                        bn = sim_context._get_trait_name(bit).lower()
+                        gender = str(getattr(main_si, "gender", "")).replace("Gender.", "")
+                        if "spouse" in bn or "married" in bn:
+                            label = "Husband" if gender == "MALE" else "Wife"
+                        elif "parent" in bn:
+                            # main_si is the parent of other
+                            label = "Father" if gender == "MALE" else "Mother"
+                        elif "child" in bn or "offspring" in bn:
+                            # main_si is the child of other
+                            label = "Son" if gender == "MALE" else "Daughter"
+                        elif "sibling" in bn:
+                            label = "Brother" if gender == "MALE" else "Sister"
+                        elif "romantic" in bn and "married" not in bn:
+                            label = "Romantic Partner"
+                        if label:
+                            break
+            except Exception:
+                pass
+
+            if label:
+                relations.append(other_name + "'s " + label)
+
+            if len(relations) >= 10:
+                break
+    except Exception:
+        pass
+
+    if not relations:
+        return ""
+
+    return "Your sim (" + main_name + ") is: " + ", ".join(relations)
+
+
 def _describe_relationship(contact):
     """Build a detailed character description for the prompt."""
     parts = [f"Name: {contact['name']}"]
@@ -616,13 +680,18 @@ def generate_call(callback=None, output=None):
         mutual_block = "\n\nPeople you both know:\n" + "\n".join(f"  - {m}" for m in mutuals)
         mutual_block += "\nFeel free to gossip about, mention, or bring up any of these sims naturally."
 
+    protag_rels = _get_protagonist_relationships()
+    protag_block = f"\n\n{protag_rels}" if protag_rels else ""
+
     prompt = (
-        f"Caller info:\n{rel_desc}{history_block}{mutual_block}\n\n"
+        f"Caller info:\n{rel_desc}{history_block}{mutual_block}{protag_block}\n\n"
         f"They are calling {main_name}{_location_context(main_si, contact)}.\n\n"
         f"Write what {contact['name']} says during this phone call. "
         f"If there is past interaction history, reference or build on it naturally. "
         f"If they live in different worlds, acknowledge the distance naturally "
         f"(e.g. ask how things are there, suggest visiting, reference their world). "
+        f"When referring to other sims, use correct relationship labels "
+        f"(e.g. say 'your wife' not 'Vivian's spouse' if the player IS Vivian's spouse). "
         f"Make the reason for calling feel natural given their relationship."
     )
 
@@ -678,12 +747,17 @@ def generate_text(callback=None, output=None):
         mutual_block = "\n\nPeople you both know:\n" + "\n".join(f"  - {m}" for m in mutuals)
         mutual_block += "\nFeel free to gossip about, mention, or bring up any of these sims naturally."
 
+    protag_rels = _get_protagonist_relationships()
+    protag_block = f"\n\n{protag_rels}" if protag_rels else ""
+
     prompt = (
-        f"Sender info:\n{rel_desc}{history_block}{mutual_block}\n\n"
+        f"Sender info:\n{rel_desc}{history_block}{mutual_block}{protag_block}\n\n"
         f"They are texting {main_name}{_location_context(main_si, contact)}.\n\n"
         f"Write 1-3 text messages from {contact['name']}. "
         f"If there is past interaction history, reference or build on it naturally. "
         f"If they live in different worlds, acknowledge the distance naturally. "
+        f"When referring to other sims, use correct relationship labels "
+        f"(e.g. say 'your wife' not 'Vivian's spouse' if the player IS Vivian's spouse). "
         f"Make the content feel natural given their relationship and current mood."
     )
 
@@ -752,8 +826,11 @@ def generate_reply(player_message, callback=None, output=None):
     if mutuals:
         mutual_block = "\n\nPeople you both know:\n" + "\n".join(f"  - {m}" for m in mutuals)
 
+    protag_rels = _get_protagonist_relationships()
+    protag_block = f"\n\n{protag_rels}" if protag_rels else ""
+
     prompt = (
-        f"Relationship info:\n{rel_desc}{history_block}{mutual_block}\n\n"
+        f"Relationship info:\n{rel_desc}{history_block}{mutual_block}{protag_block}\n\n"
         f"Conversation so far:\n{convo_text}\n\n"
         f"Write {other_name}'s reply (1-3 short text messages)."
     )
@@ -818,8 +895,11 @@ def send_text(contact, player_message, callback=None, output=None):
     if mutuals:
         mutual_block = "\n\nPeople you both know:\n" + "\n".join(f"  - {m}" for m in mutuals)
 
+    protag_rels = _get_protagonist_relationships()
+    protag_block = f"\n\n{protag_rels}" if protag_rels else ""
+
     prompt = (
-        f"Relationship info:\n{rel_desc}{history_block}{mutual_block}\n\n"
+        f"Relationship info:\n{rel_desc}{history_block}{mutual_block}{protag_block}\n\n"
         f"{main_name} just texted {other_name}: \"{player_message}\"\n\n"
         f"Write {other_name}'s reply (1-3 short text messages)."
     )
@@ -877,8 +957,11 @@ def send_call(contact, player_topic, callback=None, output=None):
     if mutuals:
         mutual_block = "\n\nPeople you both know:\n" + "\n".join(f"  - {m}" for m in mutuals)
 
+    protag_rels = _get_protagonist_relationships()
+    protag_block = f"\n\n{protag_rels}" if protag_rels else ""
+
     prompt = (
-        f"Person being called:\n{rel_desc}{history_block}{mutual_block}\n\n"
+        f"Person being called:\n{rel_desc}{history_block}{mutual_block}{protag_block}\n\n"
         f"{main_name} is calling {other_name}. {main_name} says: \"{player_topic}\"\n\n"
         f"Write what {other_name} says in response (3-5 lines of dialogue). "
         f"They should react naturally to what {main_name} said."

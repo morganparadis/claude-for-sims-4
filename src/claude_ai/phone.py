@@ -499,17 +499,15 @@ def _get_family_relationship(other_si, contact):
 
 def _get_protagonist_relationships():
     """
-    Build a summary of the protagonist's key relationships so Claude knows
-    who is whose spouse, parent, child, etc.
-    Returns a string like:
-      "Your sim (Morgan) is: Vivian's Husband, Jake's Father, ..."
+    Build an unambiguous summary of the protagonist's key relationships.
+    Uses explicit "X is married to Y" phrasing to avoid confusion.
     """
     main_si = sim_context.get_main_sim_info()
     if not main_si:
         return ""
 
-    main_name = main_si.first_name
-    relations = []
+    main_name = main_si.first_name + " " + main_si.last_name
+    facts = []
 
     try:
         rt = main_si.relationship_tracker
@@ -522,43 +520,39 @@ def _get_protagonist_relationships():
                 continue
             other_name = other_si.first_name + " " + other_si.last_name
 
-            # Check family bits
-            label = None
             try:
                 bits = rt.get_all_bits(target_id)
-                if bits:
-                    for bit in bits:
-                        bn = sim_context._get_trait_name(bit).lower()
-                        gender = str(getattr(main_si, "gender", "")).replace("Gender.", "")
-                        if "spouse" in bn or "married" in bn:
-                            label = "Husband" if gender == "MALE" else "Wife"
-                        elif "parent" in bn:
-                            # main_si is the parent of other
-                            label = "Father" if gender == "MALE" else "Mother"
-                        elif "child" in bn or "offspring" in bn:
-                            # main_si is the child of other
-                            label = "Son" if gender == "MALE" else "Daughter"
-                        elif "sibling" in bn:
-                            label = "Brother" if gender == "MALE" else "Sister"
-                        elif "romantic" in bn and "married" not in bn:
-                            label = "Romantic Partner"
-                        if label:
-                            break
+                if not bits:
+                    continue
+                for bit in bits:
+                    bn = sim_context._get_trait_name(bit).lower()
+                    if "spouse" in bn or "married" in bn:
+                        facts.append(main_name + " is married to " + other_name)
+                        break
+                    elif "parent" in bn:
+                        facts.append(main_name + " is " + other_name + "'s parent")
+                        break
+                    elif "child" in bn or "offspring" in bn:
+                        facts.append(main_name + " is " + other_name + "'s child")
+                        break
+                    elif "sibling" in bn:
+                        facts.append(main_name + " and " + other_name + " are siblings")
+                        break
+                    elif "romantic" in bn and "married" not in bn:
+                        facts.append(main_name + " is in a romantic relationship with " + other_name)
+                        break
             except Exception:
                 pass
 
-            if label:
-                relations.append(other_name + "'s " + label)
-
-            if len(relations) >= 10:
+            if len(facts) >= 10:
                 break
     except Exception:
         pass
 
-    if not relations:
+    if not facts:
         return ""
 
-    return "Your sim (" + main_name + ") is: " + ", ".join(relations)
+    return "IMPORTANT — the player's sim's relationships (these are FACTS, do not contradict them):\n" + "\n".join("- " + f for f in facts)
 
 
 def _describe_relationship(contact):

@@ -100,6 +100,10 @@ Rules:
 - Occasionally sprinkle in Simlish words naturally (Sul sul, Dag dag, Nooboo)
 - Never use profanity or explicit content
 - Write dialogue lines only, prefixed with the caller's first name
+- NEVER break character. NEVER say you don't have information or need more details. \
+  You are the sim — always stay in character and improvise. If someone mentions a person \
+  or event you weren't given details about, react naturally (curious, gossipy, confused, etc.) \
+  but NEVER acknowledge that you are an AI.
 
 IMPORTANT: On the very last line of your response, write MOOD: followed by the emotional \
 impact this call would have on the RECIPIENT. Pick exactly one: \
@@ -142,6 +146,10 @@ Rules:
 - The text should have a purpose: making plans, sharing news/gossip, asking a question, \
   or reacting to something
 - Never use profanity or explicit content
+- NEVER break character. NEVER say you don't have information, can't roleplay, or need more details. \
+  You are the sim — always stay in character and improvise naturally. If someone mentions a person \
+  or event you weren't given details about, react like the sim would (curious, gossipy, confused, etc.) \
+  but NEVER acknowledge that you are an AI or that you lack information.
 
 IMPORTANT: On the very last line of your response, write MOOD: followed by the emotional \
 impact this text would have on the RECIPIENT. Pick exactly one: \
@@ -166,6 +174,8 @@ A distant father (low friendship) is awkward and stilted. A close father is warm
 Rules:
 - Write 1-3 short text messages as {other_name}'s reply
 - Never use profanity or explicit content
+- NEVER break character. NEVER say you don't have information or need more details. \
+  Always stay in character and improvise naturally. NEVER acknowledge that you are an AI.
 
 IMPORTANT: On the very last line of your response, write MOOD: followed by the emotional \
 impact this reply would have on {main_name}. Pick exactly one: \
@@ -895,7 +905,9 @@ def send_text(contact, player_message, callback=None, output=None):
     prompt = (
         f"Relationship info:\n{rel_desc}{history_block}{mutual_block}{protag_block}\n\n"
         f"{main_name} just texted {other_name}: \"{player_message}\"\n\n"
-        f"Write {other_name}'s reply (1-3 short text messages)."
+        f"Write {other_name}'s reply (1-3 short text messages). "
+        f"If {main_name} mentions people or events you don't have details about, "
+        f"improvise naturally as {other_name} would — react in character, never refuse."
     )
 
     def _on_send_text_result(text, error):

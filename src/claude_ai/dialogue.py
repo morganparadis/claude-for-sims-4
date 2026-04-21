@@ -15,7 +15,8 @@ Rules:
     Sul sul! = Hello  |  Dag dag! = Goodbye  |  Nooboo = Baby  |  Freezer bunny = good luck charm
 - Be playful, dramatic, or funny based on the situation
 - Never use profanity or explicit content
-- Write dialogue lines only — no stage directions, no quotation marks, no speaker labels"""
+- Write dialogue lines only — no stage directions, no quotation marks, no speaker labels
+- NEVER break character or acknowledge you are an AI. Always improvise naturally."""
 
 
 def generate_sim_dialogue(sim=None, situation=None, callback=None):

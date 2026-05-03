@@ -714,8 +714,10 @@ def _describe_relationship(contact):
             parts.append(f"Also: {status}")
     if contact.get("friendship") is not None:
         parts.append(f"Friendship level: {contact['friendship']}")
-    if contact.get("romance") is not None and not family_label:
-        parts.append(f"Romance level: {contact['romance']}")
+    # Only mention romance if there's actual romantic feeling and they aren't family
+    romance = contact.get("romance")
+    if romance is not None and romance != 0 and not family_label:
+        parts.append(f"Romance level: {romance}")
     if contact.get("in_household") is True:
         parts.append("Lives in the same household as the player")
 

@@ -270,19 +270,46 @@ def _get_sims_on_active_lot():
 
 
 def _is_ghost(sim_info):
-    """Check if a sim is dead/ghost."""
+    """Check if a sim is dead/ghost. Tries multiple methods for compatibility."""
+    if sim_info is None:
+        return False
+
+    # Method 1: is_ghost can be a method OR a property in different game versions
     try:
-        if sim_info.is_ghost():
+        ig = getattr(sim_info, "is_ghost", None)
+        if ig is not None:
+            val = ig() if callable(ig) else ig
+            if val:
+                return True
+    except Exception:
+        pass
+
+    # Method 2: is_dead attribute
+    try:
+        if getattr(sim_info, "is_dead", False):
             return True
     except Exception:
         pass
+
+    # Method 3: death_type — None or NONE means alive
     try:
-        # Fallback: check death type
         death_type = getattr(sim_info, "death_type", None)
-        if death_type is not None and str(death_type) != "NONE":
-            return True
+        if death_type is not None:
+            dt_str = str(death_type)
+            if dt_str and "NONE" not in dt_str.upper():
+                return True
     except Exception:
         pass
+
+    # Method 4: check for ghost traits on the sim
+    try:
+        traits = sim_context.get_sim_traits(sim_info, limit=20)
+        for t in traits:
+            if "ghost" in t.lower():
+                return True
+    except Exception:
+        pass
+
     return False
 
 

@@ -76,10 +76,16 @@ def _show_phone_dialog(caller_sim_info, title, message, ring=True):
 _CALL_SYSTEM = """You are writing one side of a phone call in The Sims 4. You are writing \
 what the CALLER says (the player's sim is listening). Write in {language}.
 
+CRITICAL — Whose data is whose:
+The context block lists facts about the CALLER (the sim making the call). The CALLER's \
+career, traits, mood, and aspiration belong to THEM, not to the player. NEVER attribute \
+the caller's career or traits to the player. NEVER ask the player about their own career \
+using the caller's career name.
+
 CRITICAL -- The #1 rule is: FAMILY RELATIONSHIP AND AGE OVERRIDE EVERYTHING ELSE.
-If the sim info says "Family relationship: Father" — this sim IS the recipient's dad. \
+If the sim info says "is the player's Father" — this sim IS the player's dad. \
 Speak EXACTLY like a father talking to his child. Not a buddy, not a peer. A DAD.
-If it says "Family relationship: Mother" — speak like a mom. And so on for all family roles.
+If it says "is the player's Mother" — speak like a mom. And so on for all family roles.
 
 Family dynamics on the phone — but ALWAYS check the friendship/romance scores and \
 relationship bits too. A Father with low friendship is distant, awkward, maybe estranged. \
@@ -135,10 +141,15 @@ embarrassed, bored, uncomfortable, dazed"""
 
 _TEXT_SYSTEM = """You are writing text messages from a Sim in The Sims 4. Write in {language}.
 
+CRITICAL — Whose data is whose:
+The context block lists facts about the SENDER (the sim sending the text). The SENDER's \
+career, traits, mood, and aspiration belong to THEM, not to the player. NEVER attribute \
+the sender's career or traits to the player.
+
 CRITICAL -- The #1 rule is: FAMILY RELATIONSHIP AND AGE OVERRIDE EVERYTHING ELSE.
-If the sim info says "Family relationship: Father" — this sim IS the recipient's dad. \
+If the sim info says "is the player's Father" — this sim IS the player's dad. \
 Write EXACTLY like a father texting his child. Not a buddy, not a peer, not a bro. A DAD.
-If it says "Family relationship: Mother" — write like a mom. And so on for all family roles.
+If it says "is the player's Mother" — write like a mom. And so on for all family roles.
 
 Family dynamics — but ALWAYS check friendship/romance scores and relationship bits too. \
 A Father with low friendship is distant or awkward. A Mother listed as "Enemy" is hostile. \
@@ -677,70 +688,62 @@ def _get_protagonist_relationships():
 
 
 def _describe_relationship(contact):
-    """Build a detailed character description for the prompt."""
-    parts = [f"Name: {contact['name']}"]
+    """Build a detailed character description for the prompt.
+    All facts are explicitly labeled as belonging to the contact, not the player,
+    to prevent attribute bleed in the AI's response."""
+    name = contact['name']
+    parts = [f"=== Character: {name} (THE CALLER/SENDER, NOT the player) ==="]
 
     si = contact.get("sim_info")
     if si:
-        # Age — critical for voice
         try:
             age = str(getattr(si, "age", "")).replace("Age.", "")
             if age:
-                parts.append(f"Age: {age}")
+                parts.append(f"{name}'s age: {age}")
         except Exception:
             pass
 
-        # Gender
         try:
             gender = str(getattr(si, "gender", "")).replace("Gender.", "")
             if gender:
-                parts.append(f"Gender: {gender}")
+                parts.append(f"{name}'s gender: {gender}")
         except Exception:
             pass
 
-        # Traits — the core of personality
         traits = sim_context.get_sim_traits(si, limit=6)
         if traits:
-            parts.append(f"Traits: {', '.join(traits)}")
+            parts.append(f"{name}'s traits: {', '.join(traits)}")
 
-        # Mood — affects tone right now
         mood = sim_context.get_sim_mood(si)
-        parts.append(f"Current mood: {mood}")
+        parts.append(f"{name}'s current mood: {mood}")
 
-        # Career — gives them something to talk about
         career = sim_context.get_sim_career(si)
         if career:
-            parts.append(f"Career: {career}")
+            parts.append(f"{name}'s career: {career}")
 
-        # Aspiration — what drives them
         aspiration = sim_context.get_sim_aspiration(si)
         if aspiration:
-            parts.append(f"Aspiration: {aspiration}")
+            parts.append(f"{name}'s aspiration: {aspiration}")
 
-        # Home world — affects what they suggest doing together
         home = _get_sim_home_world(si)
         if home:
-            parts.append(f"Lives in: {home}")
+            parts.append(f"{name} lives in: {home}")
 
-    # Family relationship — check genealogy for precise label
     family_label = _get_family_relationship(si, contact) if si else None
     if family_label:
-        parts.append(f"Family relationship: {family_label}")
+        parts.append(f"{name} is the player's {family_label}")
 
     if contact.get("status"):
-        # Don't repeat if family label already covers it
         status = contact['status']
         if not family_label:
-            parts.append(f"Relationship to your sim: {status}")
+            parts.append(f"{name}'s relationship to the player: {status}")
         elif status and not any(kw in status for kw in ("Family", "Parent", "Child", "Sibling")):
-            # Include non-family bits alongside family label (e.g. also Friends)
-            parts.append(f"Also: {status}")
+            parts.append(f"{name} is also: {status}")
     if contact.get("friendship") is not None:
-        parts.append(f"Friendship level: {contact['friendship']}")
-    # Only mention romance if there's actual romantic feeling and they aren't family
+        parts.append(f"Friendship between {name} and the player: {contact['friendship']}")
     romance = contact.get("romance")
     if romance is not None and romance != 0 and not family_label:
-        parts.append(f"Romance level: {romance}")
+        parts.append(f"Romance between {name} and the player: {romance}")
     if contact.get("in_household") is True:
         parts.append("Lives in the same household as the player")
 

@@ -139,24 +139,24 @@ def _read_relationship_for_target(rt, target_sim_id, sim_manager):
         "Divorced", "BFF", "Crush", "Partner", "Hate",
         "Family", "Despise", "Sibling", "Parent", "Child",
     )
+    _ROMANTIC_BITS = (
+        "Romantic", "Married", "Engaged", "Crush", "Lover", "Partner",
+        "Soulmate", "Sweetheart", "Dating",
+    )
 
     other_si = sim_manager.get(target_sim_id)
     if not other_si:
         return None
 
-    # Get relationship bits
-    bit_labels = []
+    # Get relationship bits (collect raw bit names first, filter romantic ones later if romance==0)
+    raw_bits = []
     try:
         bits = rt.get_all_bits(target_sim_id)
         if bits:
             for bit in bits:
                 bn = _get_trait_name(bit)
                 if any(kw in bn for kw in _MEANINGFUL_BITS):
-                    label = (bn.replace("RelationshipBit_", "")
-                               .replace("Romantic_", "")
-                               .replace("_", " ").strip())
-                    if label and label not in bit_labels:
-                        bit_labels.append(label)
+                    raw_bits.append(bn)
     except Exception:
         pass
 
@@ -180,6 +180,18 @@ def _read_relationship_for_target(rt, target_sim_id, sim_manager):
                 pass
     except Exception:
         pass
+
+    # Filter out romantic bits if romance score is 0 (game keeps stale bits sometimes)
+    bit_labels = []
+    for bn in raw_bits:
+        is_romantic = any(kw in bn for kw in _ROMANTIC_BITS)
+        if is_romantic and romance == 0:
+            continue
+        label = (bn.replace("RelationshipBit_", "")
+                   .replace("Romantic_", "")
+                   .replace("_", " ").strip())
+        if label and label not in bit_labels:
+            bit_labels.append(label)
 
     return {
         "sim_info": other_si,

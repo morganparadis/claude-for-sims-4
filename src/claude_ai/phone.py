@@ -111,8 +111,11 @@ Traits add flavor ON TOP of age and family role:
 Rules:
 - Write 2-3 SHORT lines of dialogue (what the caller says). Keep it brief — like a real \
   quick phone call, not a monologue. ONE topic, not multiple.
-- The call should have a reason: sharing news, asking for advice, inviting somewhere, \
-  gossiping, complaining, celebrating, or just checking in
+- The call should have a SPECIFIC reason — pick something concrete, NOT a generic check-in. \
+  Examples: a specific piece of news, a specific question, a specific invitation, \
+  a specific complaint, a specific memory, a specific request. \
+  NEVER open with "hey it's been a while/a minute" or "things have been weird between us" \
+  or any other vague catching-up cliché. Jump straight into the actual reason.
 - Occasionally sprinkle in Simlish words naturally (Sul sul, Dag dag, Nooboo)
 - Never use profanity or explicit content
 - NEVER write romantic, flirty, or sexual content for FAMILY members \
@@ -178,8 +181,11 @@ Traits add flavor ON TOP of age and family role:
 Rules:
 - Write 1-2 SHORT text messages — like a real text, not a paragraph. Max 2 sentences each. \
   ONE topic, not multiple updates jammed together.
-- The text should have a purpose: making plans, sharing news/gossip, asking a question, \
-  or reacting to something
+- The text should have a SPECIFIC purpose — pick something concrete, NOT a generic check-in. \
+  Examples: specific news, a specific question, a specific invitation, a specific memory, \
+  a specific request, a specific reaction. \
+  NEVER open with "hey it's been a while/a minute" or "things have been weird between us" \
+  or any vague catching-up cliché. Jump straight to the actual point.
 - Never use profanity or explicit content
 - NEVER write romantic, flirty, or sexual content for FAMILY members \
   (parents, children, siblings, grandparents, grandchildren, in-laws, aunts/uncles, cousins). \
@@ -515,11 +521,25 @@ _WORLD_NAMES = {
 
 
 def _friendly_world_name(raw):
-    """Convert internal region name like 'WeddingWorld' to 'Tartosa'."""
+    """Convert internal region name to friendly name. Returns None for unknowns."""
     if not raw:
         return None
-    key = raw.lower().replace(" ", "").replace("_", "")
-    return _WORLD_NAMES.get(key, raw)
+    # Strip pack prefixes like EP18, GP12, etc.
+    import re
+    cleaned = re.sub(r'^(EP|GP|SP|FP)\d+[_ ]?', '', raw, flags=re.IGNORECASE)
+    cleaned = re.sub(r'(EP|GP|SP|FP)\d+', '', cleaned, flags=re.IGNORECASE)
+    key = cleaned.lower().replace(" ", "").replace("_", "")
+    if not key:
+        return None
+    name = _WORLD_NAMES.get(key)
+    if name:
+        return name
+    # Try partial matches
+    for k, v in _WORLD_NAMES.items():
+        if k in key or key in k:
+            return v
+    # Unknown world — return None so we don't show garbage like "ep18world"
+    return None
 
 
 def _get_sim_home_world(sim_info):

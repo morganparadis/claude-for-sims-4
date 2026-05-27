@@ -111,11 +111,20 @@ Traits add flavor ON TOP of age and family role:
 Rules:
 - Write 2-3 SHORT lines of dialogue (what the caller says). Keep it brief — like a real \
   quick phone call, not a monologue. ONE topic, not multiple.
-- The call should have a SPECIFIC reason — pick something concrete, NOT a generic check-in. \
-  Examples: a specific piece of news, a specific question, a specific invitation, \
-  a specific complaint, a specific memory, a specific request. \
-  NEVER open with "hey it's been a while/a minute" or "things have been weird between us" \
-  or any other vague catching-up cliché. Jump straight into the actual reason.
+- The call should DRIVE THE STORY FORWARD — invent something dramatic, juicy, surprising, \
+  or emotionally charged. Don't just ask "hey, have you talked to so-and-so?" — give the \
+  player something to react to. Good examples: \
+  scandalous gossip ("you will NEVER guess who I just saw at the bar"), \
+  shocking news ("I think I'm being haunted"), \
+  a confession ("I have to tell you something I've been hiding"), \
+  a dramatic ask ("can you bail me out, literally"), \
+  unhinged enthusiasm ("I just spent §10,000 on a llama, no regrets"), \
+  a problem only the player can solve ("I need your help with something illegal"), \
+  juicy speculation, a bold invitation, a wild theory, a fight with someone. \
+  Boring filler ("just calling to catch up", "wanted to check in") is FORBIDDEN. \
+  Be the most interesting voicemail in the player's inbox.
+- NEVER open with "hey it's been a while/a minute" or any vague catching-up cliché. \
+  Jump straight into the dramatic content.
 - Occasionally sprinkle in Simlish words naturally (Sul sul, Dag dag, Nooboo)
 - Never use profanity or explicit content
 - NEVER write romantic, flirty, or sexual content for FAMILY members \
@@ -192,11 +201,14 @@ Traits add flavor ON TOP of age and family role:
 Rules:
 - Write 1-2 SHORT text messages — like a real text, not a paragraph. Max 2 sentences each. \
   ONE topic, not multiple updates jammed together.
-- The text should have a SPECIFIC purpose — pick something concrete, NOT a generic check-in. \
-  Examples: specific news, a specific question, a specific invitation, a specific memory, \
-  a specific request, a specific reaction. \
-  NEVER open with "hey it's been a while/a minute" or "things have been weird between us" \
-  or any vague catching-up cliché. Jump straight to the actual point.
+- The text should DRIVE THE STORY FORWARD — give the player something to react to, not just \
+  a check-in. Invent something dramatic, juicy, weird, or emotionally charged. Good examples: \
+  scandalous gossip, shocking news, a confession, a dramatic ask, unhinged enthusiasm, \
+  a fight with someone, a wild theory, a confession, a problem only the player can solve. \
+  Boring filler ("just checking in", "thinking of you") is FORBIDDEN. \
+  Be the most interesting text in the player's inbox.
+- NEVER open with "hey it's been a while/a minute" or any vague catching-up cliché. \
+  Jump straight into the dramatic content.
 - Never use profanity or explicit content
 - NEVER write romantic, flirty, or sexual content for FAMILY members \
   (parents, children, siblings, grandparents, grandchildren, in-laws, aunts/uncles, cousins). \

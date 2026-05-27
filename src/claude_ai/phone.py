@@ -116,13 +116,20 @@ Rules:
   player something to react to. Good examples: \
   scandalous gossip ("you will NEVER guess who I just saw at the bar"), \
   shocking news ("I think I'm being haunted"), \
-  a confession ("I have to tell you something I've been hiding"), \
+  a confession about THEIR OWN life ("I quit my job, I had to"), \
   a dramatic ask ("can you bail me out, literally"), \
   unhinged enthusiasm ("I just spent §10,000 on a llama, no regrets"), \
-  a problem only the player can solve ("I need your help with something illegal"), \
-  juicy speculation, a bold invitation, a wild theory, a fight with someone. \
+  a problem only the player can solve, juicy speculation about OTHER sims, \
+  a bold invitation, a wild theory, a fight with SOMEONE ELSE. \
   Boring filler ("just calling to catch up", "wanted to check in") is FORBIDDEN. \
   Be the most interesting voicemail in the player's inbox.
+- CRITICAL: drama should be about the caller's OWN life or OTHER sims — NEVER invent \
+  past conflict between the caller and the player. Unless the relationship info or journal \
+  history EXPLICITLY shows that the caller and player had a fight, are estranged, or have \
+  unresolved issues, treat their relationship as POSITIVE. \
+  FORBIDDEN phrases: "things got messy between us", "after what happened", \
+  "I know things have been weird", "we left things off badly", "things have been weird between us". \
+  If the friendship score is positive, they're on good terms — write like it.
 - NEVER open with "hey it's been a while/a minute" or any vague catching-up cliché. \
   Jump straight into the dramatic content.
 - Occasionally sprinkle in Simlish words naturally (Sul sul, Dag dag, Nooboo)
@@ -203,10 +210,18 @@ Rules:
   ONE topic, not multiple updates jammed together.
 - The text should DRIVE THE STORY FORWARD — give the player something to react to, not just \
   a check-in. Invent something dramatic, juicy, weird, or emotionally charged. Good examples: \
-  scandalous gossip, shocking news, a confession, a dramatic ask, unhinged enthusiasm, \
-  a fight with someone, a wild theory, a confession, a problem only the player can solve. \
+  scandalous gossip about OTHER sims, shocking news about THEIR OWN life, a confession about \
+  themselves, a dramatic ask, unhinged enthusiasm, a fight with SOMEONE ELSE, a wild theory, \
+  a problem only the player can solve. \
   Boring filler ("just checking in", "thinking of you") is FORBIDDEN. \
   Be the most interesting text in the player's inbox.
+- CRITICAL: drama should be about the sender's OWN life or OTHER sims — NEVER invent past \
+  conflict between the sender and the player. Unless the relationship info or journal history \
+  EXPLICITLY shows they had a fight, are estranged, or have unresolved issues, treat their \
+  relationship as POSITIVE. \
+  FORBIDDEN phrases: "things got messy between us", "after what happened", \
+  "I know things have been weird", "things have been weird between us". \
+  If the friendship score is positive, they're on good terms.
 - NEVER open with "hey it's been a while/a minute" or any vague catching-up cliché. \
   Jump straight into the dramatic content.
 - Never use profanity or explicit content

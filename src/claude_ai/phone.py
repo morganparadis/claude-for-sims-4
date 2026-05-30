@@ -15,10 +15,10 @@ from . import api_client, sim_context, config, journal, notifications, moodlets
 _active_conversation = None
 
 
-def _show_phone_dialog(caller_sim_info, title, message, ring=True):
+def _show_phone_dialog(caller_sim_info, title, message, ring=True, recipient_sim_info=None):
     """
     Show a phone dialog with the caller's portrait and Reply/Dismiss buttons.
-    If the player clicks Reply, a hint is shown in the cheat console.
+    Anchored to recipient_sim_info if provided, else the protagonist, else active sim.
     """
     try:
         from sims4.localization import LocalizationHelperTuning
@@ -30,10 +30,9 @@ def _show_phone_dialog(caller_sim_info, title, message, ring=True):
         if not client:
             return False
 
-        # Anchor the phone dialog to the protagonist (who actually has a phone),
-        # falling back to active sim if no protagonist is set.
-        # This prevents toddlers/kids/pets from "receiving" calls and texts.
-        anchor_sim = sim_context.get_main_sim_info()
+        anchor_sim = recipient_sim_info
+        if not anchor_sim:
+            anchor_sim = sim_context.get_main_sim_info()
         if not anchor_sim:
             anchor_sim = client.active_sim_info
         if not anchor_sim:
@@ -288,18 +287,63 @@ Emotion is one of: happy, confident, flirty, inspired, focused, energized, playf
 angry, tense, embarrassed, bored, uncomfortable, dazed. This is the emotion {main_name} feels."""
 
 
-def _apply_mood_from_text(text, reason=None):
-    """Extract MOOD tag from text, apply the moodlet to protagonist, return cleaned text."""
+def _apply_mood_from_text(text, reason=None, recipient=None):
+    """Extract MOOD tag from text, apply the moodlet to the recipient, return cleaned text."""
     clean_text, mood_tag = moodlets.extract_mood_tag(text)
     if mood_tag:
-        main_si = sim_context.get_main_sim_info()
-        if not main_si:
+        target = recipient or sim_context.get_main_sim_info()
+        if not target:
             active = sim_context.get_active_sim()
             if active:
-                main_si = active.sim_info
-        if main_si:
-            moodlets.apply_mood(main_si, mood_tag, reason=reason)
+                target = active.sim_info
+        if target:
+            moodlets.apply_mood(target, mood_tag, reason=reason)
     return clean_text
+
+
+# Ages eligible to receive phone calls and texts (teen and above)
+_PHONE_ELIGIBLE_AGES = ("TEEN", "YOUNGADULT", "YOUNG_ADULT", "ADULT", "ELDER")
+
+
+def _is_phone_eligible(sim_info):
+    """Return True if a sim is old enough to use a phone (teen+)."""
+    try:
+        age_str = str(getattr(sim_info, "age", "")).replace("Age.", "").upper().replace(" ", "")
+        return age_str in _PHONE_ELIGIBLE_AGES
+    except Exception:
+        return False
+
+
+def _pick_recipient_sim():
+    """
+    Pick a random teen+ household member to receive an incoming call/text.
+    The protagonist is included in the pool. Returns a sim_info or None.
+    """
+    try:
+        import services, random as _random
+        hh = services.active_household()
+        if not hh:
+            # Fallback to protagonist
+            main = sim_context.get_main_sim_info()
+            if main and _is_phone_eligible(main):
+                return main
+            return None
+        eligible = []
+        for si in hh.sim_info_gen():
+            if _is_phone_eligible(si):
+                eligible.append(si)
+        if not eligible:
+            return None
+        return _random.choice(eligible)
+    except Exception:
+        # Fallback: protagonist or active sim
+        main = sim_context.get_main_sim_info()
+        if main and _is_phone_eligible(main):
+            return main
+        active = sim_context.get_active_sim()
+        if active and active.sim_info and _is_phone_eligible(active.sim_info):
+            return active.sim_info
+        return None
 
 
 def _get_sims_on_active_lot():
@@ -407,12 +451,13 @@ def find_contact_by_name(full_name):
     return None
 
 
-def _pick_random_relationship_sim():
-    """Pick a random non-household sim from the protagonist's relationship network."""
-    main_si = sim_context.get_main_sim_info()
-    if main_si:
-        _household_members, relationships = sim_context.get_main_sim_network(main_si)
-        contacts = relationships  # only non-household sims
+def _pick_random_relationship_sim(recipient=None):
+    """Pick a random non-household sim from the recipient's relationship network.
+    If no recipient passed, falls back to protagonist."""
+    base_si = recipient or sim_context.get_main_sim_info()
+    if base_si:
+        _household_members, relationships = sim_context.get_main_sim_network(base_si)
+        contacts = relationships
     else:
         active = sim_context.get_active_sim()
         if not active:
@@ -425,7 +470,7 @@ def _pick_random_relationship_sim():
     if not allow_ghosts:
         contacts = [c for c in contacts if not _is_ghost(c.get("sim_info"))]
 
-    # Filter out sims currently on the same lot (no point texting/calling someone who's right there)
+    # Filter out sims currently on the same lot
     on_lot = _get_sims_on_active_lot()
     if on_lot:
         contacts = [c for c in contacts if c.get("sim_id") not in on_lot]
@@ -433,7 +478,6 @@ def _pick_random_relationship_sim():
     if not contacts:
         return None
 
-    # Weight toward stronger relationships (but everyone has a chance)
     weights = []
     for contact in contacts:
         score = abs(contact.get("friendship") or 0) + abs(contact.get("romance") or 0)
@@ -481,14 +525,14 @@ def _has_active_romance_bit(bits):
     return False
 
 
-def _get_mutual_contacts(contact):
+def _get_mutual_contacts(contact, recipient=None):
     """
-    Find sims that both the protagonist and the contact have relationships with.
-    Returns a list of short descriptions like "Bella Goth (your Friend, their Crush)".
+    Find sims that both the recipient and the contact have relationships with.
+    Falls back to protagonist if no recipient supplied.
     """
     mutuals = []
     try:
-        main_si = sim_context.get_main_sim_info()
+        main_si = recipient or sim_context.get_main_sim_info()
         other_si = contact.get("sim_info")
         if not main_si or not other_si:
             return mutuals
@@ -758,13 +802,13 @@ def _location_context(main_si, contact):
     return ""
 
 
-def _get_family_relationship(other_si, contact):
+def _get_family_relationship(other_si, contact, recipient=None):
     """
-    Try to determine the precise family relationship between the protagonist
+    Try to determine the precise family relationship between the recipient (or protagonist)
     and the other sim using genealogy tracker and relationship bits.
     Returns a string like "Father", "Daughter", "Sibling" or None.
     """
-    main_si = sim_context.get_main_sim_info()
+    main_si = recipient or sim_context.get_main_sim_info()
     if not main_si or not other_si:
         return None
 
@@ -849,12 +893,13 @@ def _get_family_relationship(other_si, contact):
     return None
 
 
-def _get_protagonist_relationships():
+def _get_protagonist_relationships(recipient=None):
     """
-    Build an unambiguous summary of the protagonist's key relationships.
+    Build an unambiguous summary of the recipient's key relationships.
+    Falls back to protagonist if no recipient supplied.
     Uses explicit "X is married to Y" phrasing to avoid confusion.
     """
-    main_si = sim_context.get_main_sim_info()
+    main_si = recipient or sim_context.get_main_sim_info()
     if not main_si:
         return ""
 
@@ -925,10 +970,11 @@ def _get_protagonist_relationships():
     return "IMPORTANT — the player's sim's relationships (these are FACTS, do not contradict them):\n" + "\n".join("- " + f for f in facts)
 
 
-def _describe_relationship(contact):
+def _describe_relationship(contact, recipient=None):
     """Build a detailed character description for the prompt.
     All facts are explicitly labeled as belonging to the contact, not the player,
-    to prevent attribute bleed in the AI's response."""
+    to prevent attribute bleed in the AI's response.
+    recipient is the household sim being contacted (for family relationship lookup)."""
     name = contact['name']
     parts = [f"=== Character: {name} (THE CALLER/SENDER, NOT the player) ==="]
 
@@ -967,7 +1013,7 @@ def _describe_relationship(contact):
         if home:
             parts.append(f"{name} lives in: {home}")
 
-    family_label = _get_family_relationship(si, contact) if si else None
+    family_label = _get_family_relationship(si, contact, recipient=recipient) if si else None
     if family_label:
         parts.append(f"{name} is the player's {family_label}")
 
@@ -997,11 +1043,12 @@ def _format_conversation_history(history, main_name, other_name):
     return "\n".join(lines)
 
 
-def _start_conversation(contact, first_message):
-    """Start tracking a new conversation."""
+def _start_conversation(contact, first_message, recipient_sim=None):
+    """Start tracking a new conversation. recipient_sim is the household sim being contacted."""
     global _active_conversation
     _active_conversation = {
         "contact": contact,
+        "recipient": recipient_sim,
         "history": [{"role": "them", "text": first_message}],
     }
 
@@ -1012,27 +1059,35 @@ def get_active_conversation():
 
 
 def generate_call(callback=None, output=None):
-    """Generate an incoming phone call from a random relationship sim."""
-    contact = _pick_random_relationship_sim()
-    if not contact:
-        msg = "No relationship sims found. Set a protagonist with claude.set_main or build some relationships first."
+    """Generate an incoming phone call to a random teen+ household member."""
+    recipient = _pick_recipient_sim()
+    if not recipient:
+        msg = "No eligible household members (teen or older) found to receive a call."
         if callback:
             callback(None, msg)
         elif output:
             notifications.show_error(msg, output=output)
         return
 
-    main_si = sim_context.get_main_sim_info()
-    main_name = main_si.first_name if main_si else "your Sim"
+    contact = _pick_random_relationship_sim(recipient=recipient)
+    if not contact:
+        msg = f"{recipient.first_name} doesn't have any relationships to call from."
+        if callback:
+            callback(None, msg)
+        elif output:
+            notifications.show_error(msg, output=output)
+        return
+
+    recipient_name = recipient.first_name
 
     language = config.get_language()
     system = _CALL_SYSTEM.format(language=language)
-    rel_desc = _describe_relationship(contact)
+    rel_desc = _describe_relationship(contact, recipient=recipient)
 
     sim_history = journal.format_sim_history_for_prompt(contact["name"])
     history_block = f"\n\n{sim_history}" if sim_history else ""
 
-    mutuals = _get_mutual_contacts(contact)
+    mutuals = _get_mutual_contacts(contact, recipient=recipient)
     mutual_block = ""
     if mutuals:
         mutual_block = "\n\nPeople BOTH of you know (these are the ONLY mutual sims you can reference by name):\n" + "\n".join(f"  - {m}" for m in mutuals)
@@ -1040,31 +1095,25 @@ def generate_call(callback=None, output=None):
 DO NOT invent any other sim names — if you need to reference someone not on this list, \
 use a generic reference like 'a coworker', 'my neighbor', 'this friend of mine' instead."
 
-    protag_rels = _get_protagonist_relationships()
+    protag_rels = _get_protagonist_relationships(recipient=recipient)
     protag_block = f"\n\n{protag_rels}" if protag_rels else ""
 
     prompt = (
         f"Caller info:\n{rel_desc}{history_block}{mutual_block}{protag_block}\n\n"
-        f"They are calling {main_name}{_location_context(main_si, contact)}.\n\n"
-        f"Write what {contact['name']} says during this phone call. "
-        f"If there is past interaction history, reference or build on it naturally. "
-        f"If they live in different worlds, acknowledge the distance naturally "
-        f"(e.g. ask how things are there, suggest visiting, reference their world). "
-        f"When referring to other sims, use correct relationship labels "
-        f"(e.g. say 'your wife' not 'Vivian's spouse' if the player IS Vivian's spouse). "
-        f"Make the reason for calling feel natural given their relationship."
+        f"They are calling {recipient_name}{_location_context(recipient, contact)}.\n\n"
+        f"Write what {contact['name']} says during this phone call."
     )
 
     def _on_result(text, error):
         title = f"Call from {contact['name']}"
         if text:
-            text = _apply_mood_from_text(text, reason="Call from " + contact["name"])
-            _start_conversation(contact, text)
-            journal.add_entry("call", f"Call from {contact['name']}:\n{text}", sim_name=contact["name"])
+            text = _apply_mood_from_text(text, reason="Call from " + contact["name"], recipient=recipient)
+            _start_conversation(contact, text, recipient_sim=recipient)
+            journal.add_entry("call", f"Call from {contact['name']} (to {recipient_name}):\n{text}", sim_name=contact["name"])
             caller_si = contact.get("sim_info")
             shown = False
             if caller_si:
-                shown = _show_phone_dialog(caller_si, title, text)
+                shown = _show_phone_dialog(caller_si, title, text, recipient_sim_info=recipient)
             if not shown:
                 notifications.show(title, text, output=output)
         elif error:
@@ -1081,27 +1130,35 @@ use a generic reference like 'a coworker', 'my neighbor', 'this friend of mine' 
 
 
 def generate_text(callback=None, output=None):
-    """Generate a text message from a relationship sim."""
-    contact = _pick_random_relationship_sim()
-    if not contact:
-        msg = "No relationship sims found. Set a protagonist with claude.set_main or build some relationships first."
+    """Generate an incoming text to a random teen+ household member."""
+    recipient = _pick_recipient_sim()
+    if not recipient:
+        msg = "No eligible household members (teen or older) found to receive a text."
         if callback:
             callback(None, msg)
         elif output:
             notifications.show_error(msg, output=output)
         return
 
-    main_si = sim_context.get_main_sim_info()
-    main_name = main_si.first_name if main_si else "your Sim"
+    contact = _pick_random_relationship_sim(recipient=recipient)
+    if not contact:
+        msg = f"{recipient.first_name} doesn't have any relationships to text from."
+        if callback:
+            callback(None, msg)
+        elif output:
+            notifications.show_error(msg, output=output)
+        return
+
+    recipient_name = recipient.first_name
 
     language = config.get_language()
     system = _TEXT_SYSTEM.format(language=language)
-    rel_desc = _describe_relationship(contact)
+    rel_desc = _describe_relationship(contact, recipient=recipient)
 
     sim_history = journal.format_sim_history_for_prompt(contact["name"])
     history_block = f"\n\n{sim_history}" if sim_history else ""
 
-    mutuals = _get_mutual_contacts(contact)
+    mutuals = _get_mutual_contacts(contact, recipient=recipient)
     mutual_block = ""
     if mutuals:
         mutual_block = "\n\nPeople BOTH of you know (these are the ONLY mutual sims you can reference by name):\n" + "\n".join(f"  - {m}" for m in mutuals)
@@ -1109,30 +1166,25 @@ def generate_text(callback=None, output=None):
 DO NOT invent any other sim names — if you need to reference someone not on this list, \
 use a generic reference like 'a coworker', 'my neighbor', 'this friend of mine' instead."
 
-    protag_rels = _get_protagonist_relationships()
+    protag_rels = _get_protagonist_relationships(recipient=recipient)
     protag_block = f"\n\n{protag_rels}" if protag_rels else ""
 
     prompt = (
         f"Sender info:\n{rel_desc}{history_block}{mutual_block}{protag_block}\n\n"
-        f"They are texting {main_name}{_location_context(main_si, contact)}.\n\n"
-        f"Write 1-3 text messages from {contact['name']}. "
-        f"If there is past interaction history, reference or build on it naturally. "
-        f"If they live in different worlds, acknowledge the distance naturally. "
-        f"When referring to other sims, use correct relationship labels "
-        f"(e.g. say 'your wife' not 'Vivian's spouse' if the player IS Vivian's spouse). "
-        f"Make the content feel natural given their relationship and current mood."
+        f"They are texting {recipient_name}{_location_context(recipient, contact)}.\n\n"
+        f"Write 1-2 short text messages from {contact['name']}."
     )
 
     def _on_result(text, error):
         title = f"Text from {contact['name']}"
         if text:
-            text = _apply_mood_from_text(text, reason="Text from " + contact["name"])
-            _start_conversation(contact, text)
-            journal.add_entry("text", f"Text from {contact['name']}:\n{text}", sim_name=contact["name"])
+            text = _apply_mood_from_text(text, reason="Text from " + contact["name"], recipient=recipient)
+            _start_conversation(contact, text, recipient_sim=recipient)
+            journal.add_entry("text", f"Text from {contact['name']} (to {recipient_name}):\n{text}", sim_name=contact["name"])
             sender_si = contact.get("sim_info")
             shown = False
             if sender_si:
-                shown = _show_phone_dialog(sender_si, title, text, ring=False)
+                shown = _show_phone_dialog(sender_si, title, text, ring=False, recipient_sim_info=recipient)
             if not shown:
                 notifications.show(title, text, output=output)
         elif error:
@@ -1164,12 +1216,17 @@ def generate_reply(player_message, callback=None, output=None):
 
     contact = _active_conversation["contact"]
     history = _active_conversation["history"]
+    recipient = _active_conversation.get("recipient")
 
     # Add the player's message to history
     history.append({"role": "you", "text": player_message})
 
-    main_si = sim_context.get_main_sim_info()
-    main_name = main_si.first_name if main_si else "your Sim"
+    # The "main_name" here is the household member who received the original message
+    if recipient:
+        main_name = recipient.first_name
+    else:
+        main_si = sim_context.get_main_sim_info()
+        main_name = main_si.first_name if main_si else "your Sim"
     other_name = contact["name"]
 
     language = config.get_language()
@@ -1178,18 +1235,18 @@ def generate_reply(player_message, callback=None, output=None):
         other_name=other_name,
         main_name=main_name,
     )
-    rel_desc = _describe_relationship(contact)
+    rel_desc = _describe_relationship(contact, recipient=recipient)
     convo_text = _format_conversation_history(history, main_name, other_name)
     sim_history = journal.format_sim_history_for_prompt(other_name)
     history_block = f"\n\n{sim_history}" if sim_history else ""
 
-    mutuals = _get_mutual_contacts(contact)
+    mutuals = _get_mutual_contacts(contact, recipient=recipient)
     mutual_block = ""
     if mutuals:
         mutual_block = "\n\nPeople BOTH of you know (the ONLY mutual sims you can name):\n" + "\n".join(f"  - {m}" for m in mutuals)
         mutual_block += "\nDO NOT invent other sim names — use generic references like 'a coworker' if needed."
 
-    protag_rels = _get_protagonist_relationships()
+    protag_rels = _get_protagonist_relationships(recipient=recipient)
     protag_block = f"\n\n{protag_rels}" if protag_rels else ""
 
     prompt = (
@@ -1200,7 +1257,7 @@ def generate_reply(player_message, callback=None, output=None):
 
     def _on_result(text, error):
         if text:
-            text = _apply_mood_from_text(text, reason="Reply from " + other_name)
+            text = _apply_mood_from_text(text, reason="Reply from " + other_name, recipient=recipient)
             history.append({"role": "them", "text": text})
             journal.add_entry(
                 "text",
@@ -1213,7 +1270,7 @@ def generate_reply(player_message, callback=None, output=None):
             sender_si = contact.get("sim_info")
             shown = False
             if sender_si:
-                shown = _show_phone_dialog(sender_si, title, text, ring=False)
+                shown = _show_phone_dialog(sender_si, title, text, ring=False, recipient_sim_info=recipient)
             if not shown:
                 notifications.show(title, text, output=output)
         elif error:

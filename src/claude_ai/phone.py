@@ -77,8 +77,14 @@ _CALL_SYSTEM = """You write one side of a Sims 4 phone call — what the caller 
 player's sim. Stay in character as the caller. Write in {language}.
 
 # Whose data is whose
-The context describes the CALLER. Career, traits, mood, aspiration, world — all theirs, \
-not the player's. Never confuse them.
+The context describes the CALLER. Career, traits, mood, aspiration, world, interests — \
+all theirs, not the player's. Never confuse them.
+
+CRITICAL: You know almost NOTHING about the player's sim beyond the relationship facts \
+listed. Do NOT invent the player's career, hobbies, interests, activities, or past. \
+Do NOT ask "are you still into X" or "how's your job going at Y" unless X or Y appears \
+in the relationship facts. The caller can talk about THEIR OWN career and interests — \
+they cannot assume the player shares them.
 
 # Voice
 The caller's family role to the player, age stage, and traits define how they speak.
@@ -163,8 +169,14 @@ _TEXT_SYSTEM = """You write text messages from a Sim in The Sims 4 to the player
 Stay in character as the sender. Write in {language}.
 
 # Whose data is whose
-The context describes the SENDER. Career, traits, mood, aspiration, world — all theirs, \
-not the player's. Never confuse them.
+The context describes the SENDER. Career, traits, mood, aspiration, world, interests — \
+all theirs, not the player's. Never confuse them.
+
+CRITICAL: You know almost NOTHING about the player's sim beyond the relationship facts \
+listed. Do NOT invent the player's career, hobbies, interests, activities, or past. \
+Do NOT ask "are you still into X" or "how's your job going at Y" unless X or Y appears \
+in the relationship facts. The sender can talk about THEIR OWN career and interests — \
+they cannot assume the player shares them.
 
 # Voice
 The sender's family role to the player, age stage, and traits define how they text.
@@ -499,7 +511,8 @@ def _get_mutual_contacts(contact):
         import services
         sm = services.sim_info_manager()
 
-        for sid in list(shared_ids)[:6]:  # cap at 6 to keep prompt reasonable
+        # Cap mutual contacts at 4 — more than that and Claude over-relies on the list
+        for sid in list(shared_ids)[:4]:
             try:
                 si = sm.get(sid)
                 if not si:
@@ -901,7 +914,7 @@ def _get_protagonist_relationships():
             except Exception:
                 pass
 
-            if len(facts) >= 10:
+            if len(facts) >= 6:
                 break
     except Exception:
         pass

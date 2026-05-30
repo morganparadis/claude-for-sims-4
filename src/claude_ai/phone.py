@@ -100,9 +100,23 @@ Traits add flavor on top (Hot-Headed rants, Goofball jokes, Snob condescends, Lo
 Your FIRST line must contain a specific, concrete piece of information or question — \
 NEVER a vague observation about feelings, distance, time, or the relationship's vibe.
 
-Drama should be about the caller's own life or OTHER sims (gossip about a mutual, \
-surprising news, a confession, a dramatic ask, unhinged enthusiasm, a wild theory, \
-a problem only the player can solve). Occasional Simlish (Sul sul, Dag dag, Nooboo) is fine.
+The topic should usually be about the CALLER'S OWN LIFE — their day, a recent thought, \
+something they did/saw/want, a question for the player. INVENT concrete specifics: \
+locations they went, objects they bought, food they ate, jobs they screwed up, \
+dreams they had, opinions, weird encounters with strangers, conspiracy theories, \
+emergencies, regrets, ambitions, bad ideas, good ideas, hot takes. \
+Be specific (a llama, a §10,000 mistake, a weird painting in the basement, \
+a coworker named Brad — generic role names for non-mutuals are fine).
+
+Topic variety guide (rotate, don't keep picking the same kind):
+1. Their own life right now (most common)
+2. A specific question or favor they need
+3. A confession or admission
+4. A reaction to something that happened to them
+5. An invitation or plan (respect the geography rule)
+6. A wild idea, opinion, or hot take
+7. Gossip about a mutual (USE SPARINGLY — only ~1 in 5 calls, not the default)
+Occasional Simlish (Sul sul, Dag dag, Nooboo) is fine.
 
 # Geography rule (STRICT)
 Look at the caller's world vs the player's world (both listed in the context).
@@ -162,9 +176,22 @@ Goofball = playful, Romantic = hearts, Loner = terse, Evil = passive aggressive)
 specific, concrete piece of information or question — NEVER a vague observation about \
 feelings, distance, time, or the relationship's vibe.
 
-Drama should be about the sender's own life or OTHER sims (gossip about a mutual, a \
-confession, a dramatic ask, shocking news, unhinged enthusiasm, a fight with someone \
-else, a problem only the player can solve).
+The topic should usually be about the SENDER'S OWN LIFE — their day, a recent thought, \
+something they did/saw/want, a question for the player. INVENT concrete specifics: \
+locations they went, objects they bought, food they ate, jobs they screwed up, \
+dreams they had, opinions, weird encounters with strangers, conspiracy theories, \
+emergencies, regrets, ambitions, bad ideas, hot takes. \
+Be specific (a llama, a §10,000 mistake, a weird painting in the basement, \
+a coworker named Brad — generic role names for non-mutuals are fine).
+
+Topic variety guide (rotate, don't keep picking the same kind):
+1. Their own life right now (most common)
+2. A specific question or favor they need
+3. A confession or admission
+4. A reaction to something that happened to them
+5. An invitation or plan (respect the geography rule)
+6. A wild idea, opinion, or hot take
+7. Gossip about a mutual (USE SPARINGLY — only ~1 in 5 messages, not the default)
 
 # Geography rule (STRICT)
 Look at the sender's world vs the player's world (both listed in the context).

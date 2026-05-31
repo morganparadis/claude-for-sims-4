@@ -555,12 +555,21 @@ def _clean_bit_label(bn):
             "Grandparent", "Grandfather", "Grandmother", "Granny", "Grandpa",
             "Grandchild", "Grandson", "Granddaughter",
             "Aunt", "Uncle", "Niece", "Nephew", "Cousin",
-            "Family", "Inlaw", "Acquaintance")
+            "Family", "Inlaw", "InLaw", "Acquaintance")
+    # Detect specific in-law patterns from internal phrasing
+    bn_compact = bn.replace("_", "").lower()
+    if "siblinginlaw" in bn_compact or "issiblinginlaw" in bn_compact:
+        return "Sibling-in-law"
+    if "parentinlaw" in bn_compact or "isparentinlaw" in bn_compact:
+        return "Parent-in-law"
+    if "childinlaw" in bn_compact or "ischildinlaw" in bn_compact:
+        return "Child-in-law"
+
     kept = [p for p in parts if p in KEEP]
     if kept:
         return " ".join(kept).strip()
-    # Fallback: original cleanup
-    return bn.replace("RelationshipBit_", "").replace("Romantic_", "").replace("_", " ").strip()
+    # If nothing matched, this is an internal/system bit — drop it
+    return ""
 
 
 def _get_mutual_contacts(contact, recipient=None):
@@ -932,6 +941,43 @@ def _get_family_relationship(other_si, contact, recipient=None):
                 m_parents = _parent_ids(gen)
                 if p_parents and m_parents and (p_parents & m_parents) and pid != main_si.sim_id:
                     return male_or("Nephew", "Niece")
+
+            # --- In-law detection: find my spouse, then check other's relation to them ---
+            spouse_id = None
+            try:
+                my_rt = main_si.relationship_tracker
+                for tid in my_rt.target_sim_gen():
+                    try:
+                        bits = list(my_rt.get_all_bits(tid))
+                        if not bits or _has_platonic_bit(bits):
+                            continue
+                        for b in bits:
+                            bn = sim_context._get_trait_name(b).lower()
+                            if "spouse" in bn or ("married" in bn and "unmarried" not in bn):
+                                spouse_id = tid
+                                break
+                        if spouse_id:
+                            break
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+
+            if spouse_id and spouse_id != other_si.sim_id:
+                spouse = sm.get(spouse_id)
+                spouse_gen = spouse.genealogy if spouse else None
+                spouse_parents = _parent_ids(spouse_gen)
+
+                # 8. Parent-in-law: other is a parent of my spouse
+                if other_si.sim_id in spouse_parents:
+                    return male_or("Father-in-law", "Mother-in-law")
+
+                # 9. Sibling-in-law: other and my spouse share a parent (and other isn't me)
+                if spouse_parents and their_parents and (spouse_parents & their_parents) and other_si.sim_id != main_si.sim_id:
+                    return male_or("Brother-in-law", "Sister-in-law")
+
+                # 10. Child-in-law: my spouse is one of other's parents (other married my kid)
+                # — covered by case 2 (Son/Daughter) if it's actually my kid; otherwise too rare
         except Exception:
             pass
     except Exception:

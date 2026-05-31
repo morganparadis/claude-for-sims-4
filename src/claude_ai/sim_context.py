@@ -308,6 +308,14 @@ _NOISE_TRAIT_KEYWORDS = (
     "acquired",
     "ftue",             # First-time user experience (tutorial-only)
     "hidden", "ghost",  # internal/occult flag traits
+    "reputation",       # Get Famous reputation tracker
+    "simpreference",    # Lovestruck preferences (likes/dislikes)
+    "handedness",       # Left/Right-handed
+    "hometurf",         # Snowy Escape lifestyle marker
+    "lifestyle",        # Snowy Escape lifestyles (Energetic, Workaholic, etc.)
+    "sentiment",        # Growing Together sentiment bits
+    "relationship_track",
+    "relbit",
 )
 
 
@@ -512,10 +520,18 @@ def get_sim_aspiration(sim_info):
         asp = sim_info.primary_aspiration
         if asp:
             raw = asp.__name__
-            # FTUE = First Time User Experience (tutorial). Not a real aspiration.
-            if "ftue" in raw.lower():
+            low = raw.lower()
+            # Filter out non-aspiration internal placeholders:
+            #   FTUE = tutorial; Track_Location_A/B = quest tracking; Test/Debug = internal
+            if any(kw in low for kw in ("ftue", "track_location", "track location",
+                                        "_test", "_debug", "placeholder")):
                 return None
-            return raw.replace("aspiration_", "").replace("Aspiration_", "").replace("_", " ").title()
+            cleaned = raw.replace("aspiration_", "").replace("Aspiration_", "").replace("_", " ").title()
+            # Strip trailing single letters from labels like "Track Location A"
+            words = cleaned.split()
+            if words and len(words[-1]) == 1 and words[-1].isalpha():
+                words = words[:-1]
+            return " ".join(words) if words else None
     except Exception:
         pass
     return None

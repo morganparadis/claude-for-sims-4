@@ -95,13 +95,9 @@ coworker, or acquaintance — NEVER assume any family relationship and NEVER use
 terms like "mom", "dad", "son", "daughter". Modify warmth by friendship score: high = \
 warm, low = stilted, negative = hostile.
 
-Age:
-- Teen: dramatic, slang
-- Young Adult: casual but articulate
-- Adult: measured sentences, no youth slang ("yo", "bro", "dude")
-- Elder: nostalgic, formal, long-winded
-
-Traits add flavor on top (Hot-Headed rants, Goofball jokes, Snob condescends, Loner is terse).
+Match the voice to the sim's age and traits as listed. Teens use slang; adults use \
+measured sentences without youth slang ("yo", "bro"); elders sound nostalgic and formal. \
+Traits add flavor (Hot-Headed rants, Goofball jokes, Snob condescends, Loner is terse).
 
 # What to write
 2-3 SHORT lines of dialogue, prefixed with the caller's first name. One topic. \
@@ -187,13 +183,9 @@ Family roles (when listed) lock the voice — a Father texts like a dad, a Sibli
 a Spouse is intimate, a Grandparent dotes. Modify warmth by friendship score: high = warm, \
 low = stilted, negative = hostile.
 
-Age:
-- Teen: lowercase, abbreviations, lots of emoji. "omggg no way 😭"
-- Young Adult: casual but articulate. "hey are you free tonight?"
-- Adult: complete sentences, minimal emoji, no youth slang. "Hi! Are you free this weekend?"
-- Elder: formal, warm, sometimes long-winded. "Hello dear, I hope you're well."
-
-Traits add flavor on top (Hot-Headed = caps, Gloomy = ellipses, Snob = condescending grammar, \
+Match texting style to the sender's age: teens use lowercase, abbreviations, emoji; \
+adults use complete sentences with minimal emoji and no youth slang; elders are formal \
+and warm. Traits add flavor (Hot-Headed = caps, Gloomy = ellipses, Snob = condescending, \
 Goofball = playful, Romantic = hearts, Loner = terse, Evil = passive aggressive).
 
 # What to write
@@ -508,6 +500,61 @@ def _has_platonic_bit(bits):
     return False
 
 
+def _describe_recipient(recipient_sim):
+    """Build a short recipient block — just enough so the caller knows who they're addressing."""
+    if not recipient_sim:
+        return ""
+    name = f"{recipient_sim.first_name} {recipient_sim.last_name}".strip()
+    parts = [f"=== Recipient: {name} (the person receiving this) ==="]
+    try:
+        age = str(getattr(recipient_sim, "age", "")).replace("Age.", "")
+        if age:
+            parts.append(f"{recipient_sim.first_name}'s age: {age}")
+    except Exception:
+        pass
+    try:
+        gender = str(getattr(recipient_sim, "gender", "")).replace("Gender.", "")
+        if gender:
+            parts.append(f"{recipient_sim.first_name}'s gender: {gender}")
+    except Exception:
+        pass
+    traits = sim_context.get_sim_traits(recipient_sim, limit=4)
+    if traits:
+        parts.append(f"{recipient_sim.first_name}'s traits: {', '.join(traits)}")
+    return "\n".join(parts)
+
+
+def _clean_bit_label(bn):
+    """Extract a clean human-readable relationship label from a raw bit name.
+    Example: 'familyRelationshipBitsAcquired_Sibling_NeutralRel_LowRival' -> 'Sibling'
+             'RelationshipBit_Friend_Good' -> 'Good Friend'
+             'Romantic_Lover' -> 'Lover'
+    """
+    if not bn:
+        return ""
+    # Strip noise tokens
+    parts = bn.replace("RelationshipBit_", "").replace("Romantic_", "")
+    parts = parts.split("_")
+    # Token whitelist — keep only words that mean something to a player
+    KEEP = ("Friend", "Friends", "Friendly", "Good", "Best", "BFF",
+            "Enemy", "Hate", "Despise", "Rival",
+            "Married", "Spouse", "Engaged", "Fiance",
+            "Crush", "Lover", "Soulmate", "Sweetheart", "Dating",
+            "Romantic", "Partner",
+            "Sibling", "Brother", "Sister",
+            "Parent", "Mother", "Father", "Mom", "Dad",
+            "Child", "Son", "Daughter",
+            "Grandparent", "Grandfather", "Grandmother", "Granny", "Grandpa",
+            "Grandchild", "Grandson", "Granddaughter",
+            "Aunt", "Uncle", "Niece", "Nephew", "Cousin",
+            "Family", "Inlaw", "Acquaintance")
+    kept = [p for p in parts if p in KEEP]
+    if kept:
+        return " ".join(kept).strip()
+    # Fallback: original cleanup
+    return bn.replace("RelationshipBit_", "").replace("Romantic_", "").replace("_", " ").strip()
+
+
 def _get_mutual_contacts(contact, recipient=None):
     """
     Find sims that both the recipient and the contact have relationships with.
@@ -561,8 +608,9 @@ def _get_mutual_contacts(contact, recipient=None):
                         for kw in ("Friend", "Enemy", "Romantic", "Married", "BFF",
                                    "Crush", "Family", "Sibling", "Parent", "Child"):
                             if kw in bn:
-                                label = bn.replace("RelationshipBit_", "").replace("Romantic_", "").replace("_", " ").strip()
-                                main_bits.append(label)
+                                label = _clean_bit_label(bn)
+                                if label and label not in main_bits:
+                                    main_bits.append(label)
                                 break
                 except Exception:
                     pass
@@ -581,8 +629,9 @@ def _get_mutual_contacts(contact, recipient=None):
                         for kw in ("Friend", "Enemy", "Romantic", "Married", "BFF",
                                    "Crush", "Family", "Sibling", "Parent", "Child"):
                             if kw in bn:
-                                label = bn.replace("RelationshipBit_", "").replace("Romantic_", "").replace("_", " ").strip()
-                                other_bits.append(label)
+                                label = _clean_bit_label(bn)
+                                if label and label not in other_bits:
+                                    other_bits.append(label)
                                 break
                 except Exception:
                     pass
@@ -1092,8 +1141,11 @@ DO NOT invent any other sim names — if you need to reference someone not on th
 use a generic reference like 'a coworker', 'my neighbor', 'this friend of mine' instead."
 
 
+    recipient_block = _describe_recipient(recipient)
+
     prompt = (
         f"Caller info:\n{rel_desc}{history_block}{mutual_block}\n\n"
+        f"{recipient_block}\n\n"
         f"They are calling {recipient_name}{_location_context(recipient, contact)}.\n\n"
         f"Write what {contact['name']} says during this phone call."
     )
@@ -1161,8 +1213,11 @@ DO NOT invent any other sim names — if you need to reference someone not on th
 use a generic reference like 'a coworker', 'my neighbor', 'this friend of mine' instead."
 
 
+    recipient_block = _describe_recipient(recipient)
+
     prompt = (
         f"Sender info:\n{rel_desc}{history_block}{mutual_block}\n\n"
+        f"{recipient_block}\n\n"
         f"They are texting {recipient_name}{_location_context(recipient, contact)}.\n\n"
         f"Write 1-2 short text messages from {contact['name']}."
     )

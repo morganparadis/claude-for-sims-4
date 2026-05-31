@@ -298,14 +298,27 @@ def get_active_sim():
     return None
 
 
+_NOISE_TRAIT_KEYWORDS = (
+    "basemental",       # Basemental Drugs / addiction mod traits
+    "attraction",       # Wonderful/Wicked Whims attraction-system bits
+    "turnon", "turnoff",
+    "civicpolicy",      # Eco Lifestyle civic policy effects
+    "familyrelationship",
+    "neutralrel", "lowrival", "highrival",
+    "acquired",
+    "ftue",             # First-time user experience (tutorial-only)
+    "hidden", "ghost",  # internal/occult flag traits
+)
+
+
 def get_sim_traits(sim_info, limit=6):
-    """Return a list of cleaned trait names for a sim."""
+    """Return a list of cleaned personality trait names — filtered to player-facing ones."""
     try:
-        # Try multiple ways to get the trait list
+        # Prefer personality_traits (just the picked-at-CAS traits), then fall back.
         raw = None
         for accessor in (
-            lambda: list(sim_info.trait_tracker.equipped_traits),
             lambda: list(sim_info.trait_tracker.personality_traits),
+            lambda: list(sim_info.trait_tracker.equipped_traits),
             lambda: list(sim_info.trait_tracker.traits),
             lambda: list(sim_info.get_traits()),
         ):
@@ -322,12 +335,18 @@ def get_sim_traits(sim_info, limit=6):
         names = []
         for t in raw:
             name = _get_trait_name(t)
-            # Skip internal/occult traits that aren't player-visible
-            if any(kw in name.lower() for kw in ("occult", "hidden", "gender", "ghost")):
+            low = name.lower()
+            if any(kw in low for kw in _NOISE_TRAIT_KEYWORDS):
+                continue
+            # Skip non-personality bits like "gender" markers
+            if "gender" in low and "trait_" not in low:
                 continue
             cleaned = (name
                 .replace("trait_", "").replace("Trait_", "")
                 .replace("_", " ").strip().title())
+            # Drop anything left that still looks like a system bit
+            if ":" in cleaned or any(kw in cleaned.lower() for kw in _NOISE_TRAIT_KEYWORDS):
+                continue
             if cleaned and cleaned not in names:
                 names.append(cleaned)
                 if len(names) >= limit:
@@ -488,11 +507,15 @@ def get_sim_career(sim_info):
 
 
 def get_sim_aspiration(sim_info):
-    """Return the sim's current aspiration name."""
+    """Return the sim's current aspiration name, or None for tutorial/placeholder ones."""
     try:
         asp = sim_info.primary_aspiration
         if asp:
-            return asp.__name__.replace("aspiration_", "").replace("_", " ").title()
+            raw = asp.__name__
+            # FTUE = First Time User Experience (tutorial). Not a real aspiration.
+            if "ftue" in raw.lower():
+                return None
+            return raw.replace("aspiration_", "").replace("Aspiration_", "").replace("_", " ").title()
     except Exception:
         pass
     return None

@@ -95,9 +95,13 @@ coworker, or acquaintance — NEVER assume any family relationship and NEVER use
 terms like "mom", "dad", "son", "daughter". Modify warmth by friendship score: high = \
 warm, low = stilted, negative = hostile.
 
-Match the voice to the sim's age and traits as listed. Teens use slang; adults use \
-measured sentences without youth slang ("yo", "bro"); elders sound nostalgic and formal. \
-Traits add flavor (Hot-Headed rants, Goofball jokes, Snob condescends, Loner is terse).
+Age (match the caller's age stage):
+- Teen: dramatic, slang
+- Young Adult: casual but articulate
+- Adult: measured sentences, no youth slang ("yo", "bro", "dude")
+- Elder: nostalgic, formal, long-winded
+
+Traits add flavor on top (Hot-Headed rants, Goofball jokes, Snob condescends, Loner is terse).
 
 # What to write
 2-3 SHORT lines of dialogue, prefixed with the caller's first name. One topic. \
@@ -183,9 +187,13 @@ Family roles (when listed) lock the voice — a Father texts like a dad, a Sibli
 a Spouse is intimate, a Grandparent dotes. Modify warmth by friendship score: high = warm, \
 low = stilted, negative = hostile.
 
-Match texting style to the sender's age: teens use lowercase, abbreviations, emoji; \
-adults use complete sentences with minimal emoji and no youth slang; elders are formal \
-and warm. Traits add flavor (Hot-Headed = caps, Gloomy = ellipses, Snob = condescending, \
+Age (match the sender's age stage):
+- Teen: lowercase, abbreviations, lots of emoji. "omggg no way 😭"
+- Young Adult: casual but articulate. "hey are you free tonight?"
+- Adult: complete sentences, minimal emoji, no youth slang. "Hi! Are you free this weekend?"
+- Elder: formal, warm, sometimes long-winded. "Hello dear, I hope you're well."
+
+Traits add flavor on top (Hot-Headed = caps, Gloomy = ellipses, Snob = condescending grammar, \
 Goofball = playful, Romantic = hearts, Loner = terse, Evil = passive aggressive).
 
 # What to write
@@ -645,7 +653,7 @@ def _get_mutual_contacts(contact, recipient=None):
                         age = f", {age_str}"
                 except Exception:
                     pass
-                world_part = f", lives in {world}" if world else ""
+                world_part = f", lives in {world}" if world else ", world unknown — treat as long-distance only"
 
                 if main_bits or other_bits:
                     main_label = ", ".join(main_bits[:2]) if main_bits else "acquaintance"

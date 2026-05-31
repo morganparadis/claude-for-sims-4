@@ -976,15 +976,58 @@ def _describe_relationship(contact, recipient=None):
             parts.append(f"{name}'s relationship to the player: {status}")
         elif status and not any(kw in status for kw in ("Family", "Parent", "Child", "Sibling")):
             parts.append(f"{name} is also: {status}")
-    if contact.get("friendship") is not None:
-        parts.append(f"Friendship between {name} and the player: {contact['friendship']}")
+    f_score = contact.get("friendship")
+    if f_score is not None:
+        f_label = _friendship_label(f_score)
+        if f_label:
+            parts.append(f"How {name} feels about the player: {f_label}")
     romance = contact.get("romance")
     if romance is not None and romance != 0 and not family_label:
-        parts.append(f"Romance between {name} and the player: {romance}")
+        r_label = _romance_label(romance)
+        if r_label:
+            parts.append(f"Romantic feelings: {r_label}")
     if contact.get("in_household") is True:
         parts.append("Lives in the same household as the player")
 
     return "\n".join(parts)
+
+
+def _friendship_label(score):
+    """
+    Convert a Sims 4 friendship score to a closeness label.
+    Positive scores only indicate degrees of closeness — never tension.
+    Tension only appears at NEGATIVE scores.
+    """
+    if score is None:
+        return None
+    if score >= 75:
+        return "best friends, very close"
+    if score >= 45:
+        return "close friends"
+    if score >= 20:
+        return "friends, get along well"
+    if score >= 0:
+        return "friendly acquaintances"
+    if score >= -40:
+        return "have some negative history"
+    if score >= -70:
+        return "actively dislike each other"
+    return "enemies"
+
+
+def _romance_label(score):
+    """Convert a Sims 4 romance score to a closeness label (positive only)."""
+    if score is None or score == 0:
+        return None
+    if score >= 75:
+        return "deeply in love"
+    if score >= 45:
+        return "strong romantic attraction"
+    if score >= 20:
+        return "growing romantic interest"
+    if score >= 1:
+        return "mild attraction"
+    return None
 
 
 def _format_conversation_history(history, main_name, other_name):

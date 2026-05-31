@@ -896,11 +896,31 @@ def _location_context(main_si, contact):
     return ""
 
 
+_AGE_RANK = {
+    "BABY": 0, "INFANT": 0, "TODDLER": 1, "CHILD": 2, "TEEN": 3,
+    "YOUNGADULT": 4, "YOUNG_ADULT": 4,
+    "ADULT": 5, "ELDER": 6,
+}
+
+
+def _age_rank(sim_si):
+    """Return a numeric age rank (higher = older), or None if unknown."""
+    if not sim_si:
+        return None
+    try:
+        age_str = str(getattr(sim_si, "age", "")).replace("Age.", "").upper().replace(" ", "")
+        return _AGE_RANK.get(age_str)
+    except Exception:
+        return None
+
+
 def _get_family_relationship(other_si, contact, recipient=None):
     """
     Try to determine the precise family relationship between the recipient (or protagonist)
     and the other sim using genealogy tracker and relationship bits.
     Returns a string like "Father", "Daughter", "Grandfather", "Sibling" or None.
+    Applies age sanity checks — a younger sim can never be labeled the parent of an
+    older sim (catches corrupted genealogy data).
     """
     main_si = recipient or sim_context.get_main_sim_info()
     if not main_si or not other_si:
@@ -911,6 +931,17 @@ def _get_family_relationship(other_si, contact, recipient=None):
 
     def male_or(male_label, female_label):
         return male_label if is_male else female_label
+
+    # Age sanity: if the OTHER sim is younger than main, they can't be a parent or
+    # grandparent of main. If older, they can't be a child or grandchild.
+    main_rank = _age_rank(main_si)
+    other_rank = _age_rank(other_si)
+    other_can_be_parent_of_main = (
+        main_rank is None or other_rank is None or other_rank >= main_rank
+    )
+    other_can_be_child_of_main = (
+        main_rank is None or other_rank is None or other_rank <= main_rank
+    )
 
     # Try genealogy tracker first — most precise. Walks up to 2 generations.
     try:
@@ -934,12 +965,12 @@ def _get_family_relationship(other_si, contact, recipient=None):
         my_parents = _parent_ids(gen)
         their_parents = _parent_ids(other_gen)
 
-        # 1. Direct parent: other is one of my parents
-        if other_si.sim_id in my_parents:
+        # 1. Direct parent: other is one of my parents (age-gated)
+        if other_si.sim_id in my_parents and other_can_be_parent_of_main:
             return male_or("Father", "Mother")
 
-        # 2. Direct child: I am one of other's parents
-        if main_si.sim_id in their_parents:
+        # 2. Direct child: I am one of other's parents (age-gated)
+        if main_si.sim_id in their_parents and other_can_be_child_of_main:
             return male_or("Son", "Daughter")
 
         # 3. Sibling: share a parent
@@ -955,7 +986,7 @@ def _get_family_relationship(other_si, contact, recipient=None):
                 psi = sm.get(pid)
                 if psi:
                     grandparent_ids |= _parent_ids(psi.genealogy)
-            if other_si.sim_id in grandparent_ids:
+            if other_si.sim_id in grandparent_ids and other_can_be_parent_of_main:
                 return male_or("Grandfather", "Grandmother")
 
             # 5. Grandchild: I am a parent of one of other's parents
@@ -964,7 +995,7 @@ def _get_family_relationship(other_si, contact, recipient=None):
                 psi = sm.get(pid)
                 if psi:
                     their_grandparent_ids |= _parent_ids(psi.genealogy)
-            if main_si.sim_id in their_grandparent_ids:
+            if main_si.sim_id in their_grandparent_ids and other_can_be_child_of_main:
                 return male_or("Grandson", "Granddaughter")
 
             # 6. Aunt/Uncle: other is a sibling of one of my parents
@@ -1060,10 +1091,10 @@ def _get_family_relationship(other_si, contact, recipient=None):
             if has_compact("siblinginlaw") or has_compact("brotherinlaw") or has_compact("sisterinlaw"):
                 return male_or("Brother-in-law", "Sister-in-law")
 
-            # Other specific terms first
-            if any_bit("grandparent"):
+            # Other specific terms first (grandparent/grandchild gated by age too)
+            if any_bit("grandparent") and other_can_be_parent_of_main:
                 return male_or("Grandfather", "Grandmother")
-            if any_bit("grandchild", "grandson", "granddaughter"):
+            if any_bit("grandchild", "grandson", "granddaughter") and other_can_be_child_of_main:
                 return male_or("Grandson", "Granddaughter")
             if any_bit("aunt", "uncle"):
                 return male_or("Uncle", "Aunt")
@@ -1075,11 +1106,13 @@ def _get_family_relationship(other_si, contact, recipient=None):
                 return male_or("Husband", "Wife")
             if any_bit("sibling", "brother", "sister"):
                 return male_or("Brother", "Sister")
-            # Generic parent/child LAST — exclude grandparent AND in-law substrings
-            if any_bit("parent") and not any_bit("grandparent") and not has_compact("inlaw"):
+            # Generic parent/child LAST — exclude grandparent AND in-law substrings,
+            # and gate by age so we don't claim a younger sim is a parent.
+            if any_bit("parent") and not any_bit("grandparent") and not has_compact("inlaw") \
+                    and other_can_be_parent_of_main:
                 return male_or("Father", "Mother")
             if (any_bit("offspring") or any(("child" in bn and "grandchild" not in bn) for bn in bit_names)) \
-                    and not has_compact("inlaw"):
+                    and not has_compact("inlaw") and other_can_be_child_of_main:
                 return male_or("Son", "Daughter")
     except Exception:
         pass

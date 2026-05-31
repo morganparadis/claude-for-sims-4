@@ -478,6 +478,64 @@ try:
         output(f"=== Prompt context for {contact['name']} ===")
         output(desc)
 
+    @sims4.commands.Command("claude.dumpprompt", command_type=sims4.commands.CommandType.Live)
+    def cmd_dump_prompt(first_name: str = None, last_name: str = None, _connection=None):
+        """Build a text prompt as if the named sim were texting the active sim,
+        but DON'T send it. Just write it to a file so we can inspect what
+        Claude would see."""
+        output = sims4.commands.CheatOutput(_connection)
+        if not first_name:
+            output("[Claude AI] Usage: claude.dumpprompt <First> <Last>")
+            output("[Claude AI] Builds a text prompt as if that sim was texting you,")
+            output("[Claude AI] writes it to ClaudeAI_LastPrompt.txt in your Mods folder.")
+            return
+        full_name = f"{first_name} {last_name}".strip() if last_name else first_name
+        contact = phone.find_contact_by_name(full_name)
+        if not contact:
+            output(f"[Claude AI] Could not find '{full_name}'.")
+            return
+
+        # Use the currently active sim as the "recipient" so we see exactly
+        # what would be sent if they got a text from this contact right now.
+        recipient = None
+        active = sim_context.get_active_sim()
+        if active:
+            recipient = active.sim_info
+        if not recipient:
+            output("[Claude AI] No active sim to use as recipient.")
+            return
+
+        recipient_name = recipient.first_name
+        rel_desc = phone._describe_relationship(contact, recipient=recipient)
+        sim_history = journal.format_sim_history_for_prompt(contact["name"], recipient_name=recipient_name)
+        history_block = f"\n\n{sim_history}" if sim_history else ""
+        mutuals = phone._get_mutual_contacts(contact, recipient=recipient)
+        mutual_block = ""
+        if mutuals:
+            mutual_block = "\n\nPeople BOTH of you know:\n" + "\n".join(f"  - {m}" for m in mutuals)
+
+        prompt = (
+            f"Sender info:\n{rel_desc}{history_block}{mutual_block}\n\n"
+            f"They are texting {recipient_name}{phone._location_context(recipient, contact)}.\n\n"
+            f"Write 1-2 short text messages from {contact['name']}."
+        )
+
+        # Write to the same file the API client uses
+        try:
+            from . import api_client
+            import datetime
+            path = api_client._last_prompt_path()
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("=== Claude AI — Simulated Prompt (NOT SENT) ===\n")
+                f.write(f"Timestamp: {datetime.datetime.now().isoformat()}\n")
+                f.write(f"Recipient (active sim): {recipient.first_name} {recipient.last_name}\n")
+                f.write(f"Sender: {contact['name']}\n\n")
+                f.write("=== USER PROMPT ===\n")
+                f.write(prompt + "\n")
+            output(f"[Claude AI] Prompt written to: {path}")
+        except Exception as e:
+            output(f"[Claude AI] Error writing file: {e}")
+
     @sims4.commands.Command("claude.testbuffs", command_type=sims4.commands.CommandType.Live)
     def cmd_testbuffs(_connection=None):
         output = sims4.commands.CheatOutput(_connection)

@@ -66,14 +66,15 @@ def _save(entries):
 # Public write API
 # ---------------------------------------------------------------------------
 
-def add_entry(content_type, content, sim_name=None):
+def add_entry(content_type, content, sim_name=None, recipient_name=None):
     """
     Save a generated piece of content to the journal.
 
     Args:
-        content_type: short string label e.g. "story", "event", "dialogue", "storyline"
-        content:      the full generated text
-        sim_name:     optional name of the sim this was generated for
+        content_type:   short string label e.g. "story", "event", "dialogue", "storyline"
+        content:        the full generated text
+        sim_name:       optional name of the sim this was generated for / from
+        recipient_name: for phone calls/texts, the household sim who received it
     """
     entries = _load()
     entry = {
@@ -83,6 +84,8 @@ def add_entry(content_type, content, sim_name=None):
     }
     if sim_name:
         entry["sim"] = sim_name
+    if recipient_name:
+        entry["recipient"] = recipient_name
     entries.append(entry)
     _save(entries)
 
@@ -133,19 +136,28 @@ def get_entry_count():
     return len(_load())
 
 
-def get_sim_history(sim_name, n=6):
-    """Return recent journal entries involving a specific sim."""
+def get_sim_history(sim_name, n=6, recipient_name=None):
+    """
+    Return recent journal entries involving a specific sim.
+    If recipient_name is given, only return entries where that household sim
+    received the message — keeps history clean per-conversation-pair.
+    """
     entries = _load()
     matched = [e for e in entries if e.get("sim", "").lower() == sim_name.lower()]
+    if recipient_name:
+        rn = recipient_name.lower()
+        # Only include entries with no recipient field (legacy/general) OR matching recipient
+        matched = [e for e in matched if (not e.get("recipient")) or e.get("recipient", "").lower() == rn]
     return matched[-n:]
 
 
-def format_sim_history_for_prompt(sim_name, n=6):
+def format_sim_history_for_prompt(sim_name, n=6, recipient_name=None):
     """
     Return a prompt-friendly summary of recent interactions with a specific sim.
+    If recipient_name is given, only includes history involving that recipient.
     Returns empty string if no history.
     """
-    entries = get_sim_history(sim_name, n)
+    entries = get_sim_history(sim_name, n, recipient_name=recipient_name)
     if not entries:
         return ""
 

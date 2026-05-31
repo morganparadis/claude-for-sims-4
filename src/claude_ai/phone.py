@@ -1080,7 +1080,7 @@ def generate_call(callback=None, output=None):
     system = _CALL_SYSTEM.format(language=language)
     rel_desc = _describe_relationship(contact, recipient=recipient)
 
-    sim_history = journal.format_sim_history_for_prompt(contact["name"])
+    sim_history = journal.format_sim_history_for_prompt(contact["name"], recipient_name=recipient_name)
     history_block = f"\n\n{sim_history}" if sim_history else ""
 
     mutuals = _get_mutual_contacts(contact, recipient=recipient)
@@ -1103,7 +1103,7 @@ use a generic reference like 'a coworker', 'my neighbor', 'this friend of mine' 
         if text:
             text = _apply_mood_from_text(text, reason="Call from " + contact["name"], recipient=recipient)
             _start_conversation(contact, text, recipient_sim=recipient)
-            journal.add_entry("call", f"Call from {contact['name']} (to {recipient_name}):\n{text}", sim_name=contact["name"])
+            journal.add_entry("call", f"Call from {contact['name']} (to {recipient_name}):\n{text}", sim_name=contact["name"], recipient_name=recipient_name)
             caller_si = contact.get("sim_info")
             shown = False
             if caller_si:
@@ -1149,7 +1149,7 @@ def generate_text(callback=None, output=None):
     system = _TEXT_SYSTEM.format(language=language)
     rel_desc = _describe_relationship(contact, recipient=recipient)
 
-    sim_history = journal.format_sim_history_for_prompt(contact["name"])
+    sim_history = journal.format_sim_history_for_prompt(contact["name"], recipient_name=recipient_name)
     history_block = f"\n\n{sim_history}" if sim_history else ""
 
     mutuals = _get_mutual_contacts(contact, recipient=recipient)
@@ -1172,7 +1172,7 @@ use a generic reference like 'a coworker', 'my neighbor', 'this friend of mine' 
         if text:
             text = _apply_mood_from_text(text, reason="Text from " + contact["name"], recipient=recipient)
             _start_conversation(contact, text, recipient_sim=recipient)
-            journal.add_entry("text", f"Text from {contact['name']} (to {recipient_name}):\n{text}", sim_name=contact["name"])
+            journal.add_entry("text", f"Text from {contact['name']} (to {recipient_name}):\n{text}", sim_name=contact["name"], recipient_name=recipient_name)
             sender_si = contact.get("sim_info")
             shown = False
             if sender_si:
@@ -1229,7 +1229,7 @@ def generate_reply(player_message, callback=None, output=None):
     )
     rel_desc = _describe_relationship(contact, recipient=recipient)
     convo_text = _format_conversation_history(history, main_name, other_name)
-    sim_history = journal.format_sim_history_for_prompt(other_name)
+    sim_history = journal.format_sim_history_for_prompt(other_name, recipient_name=main_name)
     history_block = f"\n\n{sim_history}" if sim_history else ""
 
     mutuals = _get_mutual_contacts(contact, recipient=recipient)
@@ -1255,6 +1255,7 @@ def generate_reply(player_message, callback=None, output=None):
                 f"{main_name}: {player_message}\n"
                 f"{other_name}: {text}",
                 sim_name=other_name,
+                recipient_name=main_name,
             )
             title = f"Reply from {other_name}"
             sender_si = contact.get("sim_info")
@@ -1298,7 +1299,7 @@ def send_text(contact, player_message, callback=None, output=None):
         main_name=main_name,
     )
     rel_desc = _describe_relationship(contact)
-    sim_history = journal.format_sim_history_for_prompt(other_name)
+    sim_history = journal.format_sim_history_for_prompt(other_name, recipient_name=main_name)
     history_block = f"\n\n{sim_history}" if sim_history else ""
     mutuals = _get_mutual_contacts(contact)
     mutual_block = ""
@@ -1325,6 +1326,7 @@ def send_text(contact, player_message, callback=None, output=None):
                 f"{main_name}: {player_message}\n"
                 f"{other_name}: {text}",
                 sim_name=other_name,
+                recipient_name=main_name,
             )
             title = f"Reply from {other_name}"
             sender_si = contact.get("sim_info")
@@ -1361,7 +1363,7 @@ def send_call(contact, player_topic, callback=None, output=None):
     language = config.get_language()
     system = _CALL_SYSTEM.format(language=language)
     rel_desc = _describe_relationship(contact)
-    sim_history = journal.format_sim_history_for_prompt(other_name)
+    sim_history = journal.format_sim_history_for_prompt(other_name, recipient_name=main_name)
     history_block = f"\n\n{sim_history}" if sim_history else ""
     mutuals = _get_mutual_contacts(contact)
     mutual_block = ""
@@ -1387,6 +1389,7 @@ def send_call(contact, player_topic, callback=None, output=None):
                 f"{main_name}: {player_topic}\n"
                 f"{other_name}: {text}",
                 sim_name=other_name,
+                recipient_name=main_name,
             )
             title = f"Call with {other_name}"
             caller_si = contact.get("sim_info")

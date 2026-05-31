@@ -3,7 +3,9 @@ Claude API HTTP client.
 Uses curl via subprocess since the Sims 4's embedded Python 3.7 lacks SSL support.
 All calls are made on a background thread to avoid freezing the game.
 """
+import datetime
 import json
+import os
 import subprocess
 import threading
 
@@ -11,6 +13,34 @@ from . import config
 
 _API_URL = "https://api.anthropic.com/v1/messages"
 _API_VERSION = "2023-06-01"
+
+_LAST_PROMPT_FILENAME = "ClaudeAI_LastPrompt.txt"
+
+
+def _last_prompt_path():
+    """Path to the last-prompt log file (next to claude_config.cfg)."""
+    cfg = config._find_config_file()
+    if cfg:
+        return os.path.join(os.path.dirname(cfg), _LAST_PROMPT_FILENAME)
+    return os.path.join(os.path.expanduser("~"), "Documents", _LAST_PROMPT_FILENAME)
+
+
+def _log_prompt(system, messages, model):
+    """Write the most recent prompt to a file for debugging."""
+    try:
+        path = _last_prompt_path()
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("=== Claude AI — Last Prompt ===\n")
+            f.write(f"Timestamp: {datetime.datetime.now().isoformat()}\n")
+            f.write(f"Model: {model}\n\n")
+            f.write("=== SYSTEM PROMPT ===\n")
+            f.write((system or "(none)") + "\n\n")
+            f.write("=== USER MESSAGES ===\n")
+            for m in messages:
+                f.write(f"--- role: {m.get('role')} ---\n")
+                f.write(str(m.get("content", "")) + "\n\n")
+    except Exception:
+        pass
 
 
 def _extract_text(response_data):
@@ -49,6 +79,9 @@ def call_claude_async(messages, system=None, use_fast_model=False, callback=None
         }
         if system:
             body["system"] = system
+
+        # Log the prompt so we can debug what Claude actually saw
+        _log_prompt(system, messages, model)
 
         body_json = json.dumps(body)
 

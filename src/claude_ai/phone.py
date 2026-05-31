@@ -806,87 +806,134 @@ def _get_family_relationship(other_si, contact, recipient=None):
     """
     Try to determine the precise family relationship between the recipient (or protagonist)
     and the other sim using genealogy tracker and relationship bits.
-    Returns a string like "Father", "Daughter", "Sibling" or None.
+    Returns a string like "Father", "Daughter", "Grandfather", "Sibling" or None.
     """
     main_si = recipient or sim_context.get_main_sim_info()
     if not main_si or not other_si:
         return None
 
-    # Try genealogy tracker first — most precise
+    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
+    is_male = (gender == "MALE")
+
+    def male_or(male_label, female_label):
+        return male_label if is_male else female_label
+
+    # Try genealogy tracker first — most precise. Walks up to 2 generations.
     try:
         from sims.genealogy_tracker import FamilyRelationshipIndex
         gen = main_si.genealogy
-        if gen:
-            # Check if other_si is a parent
-            for parent_idx in (FamilyRelationshipIndex.MOTHER, FamilyRelationshipIndex.FATHER):
-                try:
-                    parent_id = gen.get_family_relationship(parent_idx)
-                    if parent_id == other_si.sim_id:
-                        gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
-                        return "Father" if gender == "MALE" else "Mother"
-                except Exception:
-                    pass
-
-        # Check if protagonist is a parent of other_si
         other_gen = other_si.genealogy
-        if other_gen:
-            for parent_idx in (FamilyRelationshipIndex.MOTHER, FamilyRelationshipIndex.FATHER):
+
+        def _parent_ids(g):
+            ids = set()
+            if not g:
+                return ids
+            for idx in (FamilyRelationshipIndex.MOTHER, FamilyRelationshipIndex.FATHER):
                 try:
-                    parent_id = other_gen.get_family_relationship(parent_idx)
-                    if parent_id == main_si.sim_id:
-                        gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
-                        return "Son" if gender == "MALE" else "Daughter"
+                    pid = g.get_family_relationship(idx)
+                    if pid:
+                        ids.add(pid)
                 except Exception:
                     pass
+            return ids
 
-        # Check for siblings (share a parent)
-        if gen and other_gen:
-            try:
-                for idx in (FamilyRelationshipIndex.MOTHER, FamilyRelationshipIndex.FATHER):
-                    my_parent = gen.get_family_relationship(idx)
-                    their_parent = other_gen.get_family_relationship(idx)
-                    if my_parent and my_parent == their_parent:
-                        gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
-                        return "Brother" if gender == "MALE" else "Sister"
-            except Exception:
-                pass
+        my_parents = _parent_ids(gen)
+        their_parents = _parent_ids(other_gen)
+
+        # 1. Direct parent: other is one of my parents
+        if other_si.sim_id in my_parents:
+            return male_or("Father", "Mother")
+
+        # 2. Direct child: I am one of other's parents
+        if main_si.sim_id in their_parents:
+            return male_or("Son", "Daughter")
+
+        # 3. Sibling: share a parent
+        if my_parents and their_parents and (my_parents & their_parents):
+            return male_or("Brother", "Sister")
+
+        # 4. Grandparent: other is a parent of my parent
+        try:
+            import services
+            sm = services.sim_info_manager()
+            grandparent_ids = set()
+            for pid in my_parents:
+                psi = sm.get(pid)
+                if psi:
+                    grandparent_ids |= _parent_ids(psi.genealogy)
+            if other_si.sim_id in grandparent_ids:
+                return male_or("Grandfather", "Grandmother")
+
+            # 5. Grandchild: I am a parent of one of other's parents
+            their_grandparent_ids = set()
+            for pid in their_parents:
+                psi = sm.get(pid)
+                if psi:
+                    their_grandparent_ids |= _parent_ids(psi.genealogy)
+            if main_si.sim_id in their_grandparent_ids:
+                return male_or("Grandson", "Granddaughter")
+
+            # 6. Aunt/Uncle: other is a sibling of one of my parents
+            for pid in my_parents:
+                psi = sm.get(pid)
+                if not psi:
+                    continue
+                p_parents = _parent_ids(psi.genealogy)
+                o_parents = _parent_ids(other_gen)
+                if p_parents and o_parents and (p_parents & o_parents) and pid != other_si.sim_id:
+                    return male_or("Uncle", "Aunt")
+
+            # 7. Niece/Nephew: I am a sibling of one of other's parents
+            for pid in their_parents:
+                psi = sm.get(pid)
+                if not psi:
+                    continue
+                p_parents = _parent_ids(psi.genealogy)
+                m_parents = _parent_ids(gen)
+                if p_parents and m_parents and (p_parents & m_parents) and pid != main_si.sim_id:
+                    return male_or("Nephew", "Niece")
+        except Exception:
+            pass
     except Exception:
         pass
 
-    # Fallback: check relationship bits for family keywords
+    # Fallback: check relationship bits, MOST SPECIFIC first
+    # ("parent" matches "grandparent" as substring, so check grandparent first!)
     try:
         rt = main_si.relationship_tracker
         bits = rt.get_all_bits(other_si.sim_id)
         if bits:
+            # Collect all bit names first so we can prioritise
+            bit_names = []
             for bit in bits:
-                bn = sim_context._get_trait_name(bit)
-                bn_lower = bn.lower()
-                if "parent" in bn_lower:
-                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
-                    return "Father" if gender == "MALE" else "Mother"
-                if "child" in bn_lower or "offspring" in bn_lower:
-                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
-                    return "Son" if gender == "MALE" else "Daughter"
-                if "sibling" in bn_lower:
-                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
-                    return "Brother" if gender == "MALE" else "Sister"
-                if "grandparent" in bn_lower:
-                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
-                    return "Grandfather" if gender == "MALE" else "Grandmother"
-                if "grandchild" in bn_lower:
-                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
-                    return "Grandson" if gender == "MALE" else "Granddaughter"
-                if "spouse" in bn_lower or "married" in bn_lower:
-                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
-                    return "Husband" if gender == "MALE" else "Wife"
-                if "uncle" in bn_lower or "aunt" in bn_lower:
-                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
-                    return "Uncle" if gender == "MALE" else "Aunt"
-                if "cousin" in bn_lower:
-                    return "Cousin"
-                if "niece" in bn_lower or "nephew" in bn_lower:
-                    gender = str(getattr(other_si, "gender", "")).replace("Gender.", "")
-                    return "Nephew" if gender == "MALE" else "Niece"
+                try:
+                    bit_names.append(sim_context._get_trait_name(bit).lower())
+                except Exception:
+                    pass
+
+            def any_bit(*keywords):
+                return any(any(kw in bn for kw in keywords) for bn in bit_names)
+
+            # Most-specific first
+            if any_bit("grandparent"):
+                return male_or("Grandfather", "Grandmother")
+            if any_bit("grandchild", "grandson", "granddaughter"):
+                return male_or("Grandson", "Granddaughter")
+            if any_bit("aunt", "uncle"):
+                return male_or("Uncle", "Aunt")
+            if any_bit("niece", "nephew"):
+                return male_or("Nephew", "Niece")
+            if any_bit("cousin"):
+                return "Cousin"
+            if any_bit("spouse", "married"):
+                return male_or("Husband", "Wife")
+            if any_bit("sibling", "brother", "sister"):
+                return male_or("Brother", "Sister")
+            # Generic parent/child LAST — these are substrings of more specific terms
+            if any_bit("parent") and not any_bit("grandparent"):
+                return male_or("Father", "Mother")
+            if any_bit("offspring") or any(("child" in bn and "grandchild" not in bn) for bn in bit_names):
+                return male_or("Son", "Daughter")
     except Exception:
         pass
 

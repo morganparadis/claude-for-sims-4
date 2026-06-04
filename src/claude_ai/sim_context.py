@@ -514,6 +514,33 @@ def get_sim_career(sim_info):
     return None
 
 
+def get_current_world():
+    """Return the friendly name of the world the player is currently in, or None.
+    This is the zone the active household is loaded into — for vacations, this differs
+    from the sims' home world."""
+    try:
+        import services
+        zone = services.current_zone()
+        if not zone:
+            return None
+        zone_id = getattr(zone, "id", None)
+        if not zone_id:
+            return None
+        from world.region import get_region_instance_from_zone_id
+        region = get_region_instance_from_zone_id(zone_id)
+        if not region:
+            return None
+        name = getattr(region, "__name__", "") or str(region)
+        cleaned = (name
+            .replace("Region_", "")
+            .replace("region_", "")
+            .replace("_", " ")
+            .strip())
+        return cleaned if cleaned else None
+    except Exception:
+        return None
+
+
 def get_current_season():
     """Return the current season name (Spring/Summer/Fall/Winter), or None if Seasons isn't installed."""
     try:

@@ -965,21 +965,36 @@ def _season_context():
 
 
 def _location_context(main_si, contact):
-    """Build a short string describing where each sim lives, if known."""
+    """Build a short string describing where each sim lives AND where the
+    recipient currently is (in case they're on vacation, etc.)."""
     main_home = _get_sim_home_world(main_si) if main_si else None
     other_si = contact.get("sim_info")
     other_home = _get_sim_home_world(other_si) if other_si else None
 
+    # Current location of the recipient — usually their home world, but if the
+    # player is on vacation, it'll be the vacation world (e.g. Tartosa).
+    current_world_raw = sim_context.get_current_world()
+    current_world = _friendly_world_name(current_world_raw) if current_world_raw else None
+
+    vacation_note = ""
+    if main_si and current_world and main_home and current_world.lower() != main_home.lower():
+        vacation_note = (
+            f"\n[CURRENT LOCATION: {main_si.first_name} is currently in {current_world} "
+            f"(traveling/on vacation — NOT at home in {main_home}). "
+            f"Do not assume they are home or back from this trip.]"
+        )
+
     if main_home and other_home:
         if main_home.lower() == other_home.lower():
-            return f"\n[GEOGRAPHY: Both live in {main_home} — SAME world, in-person plans OK]"
+            return f"\n[GEOGRAPHY: Both live in {main_home} — SAME world, in-person plans OK]{vacation_note}"
         return (
             f"\n[GEOGRAPHY: {main_si.first_name} lives in {main_home}, "
             f"{contact['name']} lives in {other_home} — DIFFERENT worlds, "
             f"NO casual in-person meetups, long-distance only]"
+            f"{vacation_note}"
         )
     elif main_home:
-        return f"\n[GEOGRAPHY: {main_si.first_name} lives in {main_home}]"
+        return f"\n[GEOGRAPHY: {main_si.first_name} lives in {main_home}]{vacation_note}"
     elif other_home:
         return f"\n[GEOGRAPHY: {contact['name']} lives in {other_home}]"
     return ""

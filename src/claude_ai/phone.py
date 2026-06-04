@@ -10,9 +10,16 @@ import random
 
 from . import api_client, sim_context, config, journal, notifications, moodlets
 
-# Tracks the current conversation so the player can reply
-# Format: {"contact": contact_dict, "history": [{"role": "them"|"you", "text": str}, ...]}
-_active_conversation = None
+# Conversations keyed by recipient sim_id, so concurrent texts/calls to different
+# household sims don't overwrite each other.
+# Each value: {"contact": contact_dict, "recipient": sim_info,
+#              "history": [{"role": "them"|"you", "text": str}, ...]}
+_conversations = {}
+# Most recent recipient that received a message (fallback if no specific signal)
+_last_active_recipient_id = None
+# Set when the player clicks the Reply button on a phone dialog — tells the next
+# claude.reply which conversation to continue.
+_pending_reply_recipient_id = None
 
 
 def _show_phone_dialog(caller_sim_info, title, message, ring=True, recipient_sim_info=None):
@@ -55,9 +62,18 @@ def _show_phone_dialog(caller_sim_info, title, message, ring=True, recipient_sim
         def _on_response(response_dialog):
             try:
                 if response_dialog.accepted:
+                    # Lock in which conversation the next claude.reply belongs to.
+                    # Without this, a text/call arriving between Reply click and the
+                    # cheat-console reply would steal the conversation context.
+                    _mark_reply_intent(anchor_sim)
                     import sims4.commands
+                    other_name = ""
+                    try:
+                        other_name = caller_sim_info.first_name
+                    except Exception:
+                        pass
                     sims4.commands.output(
-                        "[Claude AI] Open the cheat console and type your reply:", None
+                        f"[Claude AI] Reply to {other_name} (as {anchor_sim.first_name}):", None
                     )
                     sims4.commands.output(
                         "[Claude AI]   claude.reply <your message>", None
@@ -1254,18 +1270,70 @@ def _format_conversation_history(history, main_name, other_name):
 
 
 def _start_conversation(contact, first_message, recipient_sim=None):
-    """Start tracking a new conversation. recipient_sim is the household sim being contacted."""
-    global _active_conversation
-    _active_conversation = {
+    """Store a new conversation, keyed by recipient sim_id."""
+    global _last_active_recipient_id
+    if recipient_sim is None or not getattr(recipient_sim, "sim_id", None):
+        # No recipient — fall back to a sentinel key so this still works (e.g. send_text)
+        rid = 0
+    else:
+        rid = recipient_sim.sim_id
+    _conversations[rid] = {
         "contact": contact,
         "recipient": recipient_sim,
         "history": [{"role": "them", "text": first_message}],
     }
+    _last_active_recipient_id = rid
+
+
+def _mark_reply_intent(recipient_sim):
+    """Called when the player clicks the Reply button on a phone dialog.
+    Locks in which conversation the next claude.reply should target."""
+    global _pending_reply_recipient_id
+    if recipient_sim and getattr(recipient_sim, "sim_id", None):
+        _pending_reply_recipient_id = recipient_sim.sim_id
+
+
+def _take_conversation_for_reply():
+    """Pick the right conversation when the player runs claude.reply.
+    Priority:
+      1. Conversation flagged by the most recent Reply-button click (cleared after use).
+      2. Conversation for the currently selected/active sim.
+      3. Most-recently-started conversation.
+    """
+    global _pending_reply_recipient_id
+    if _pending_reply_recipient_id and _pending_reply_recipient_id in _conversations:
+        convo = _conversations[_pending_reply_recipient_id]
+        _pending_reply_recipient_id = None
+        return convo
+    try:
+        active = sim_context.get_active_sim()
+        if active and active.sim_info:
+            rid = active.sim_info.sim_id
+            if rid in _conversations:
+                return _conversations[rid]
+    except Exception:
+        pass
+    if _last_active_recipient_id is not None and _last_active_recipient_id in _conversations:
+        return _conversations[_last_active_recipient_id]
+    return None
 
 
 def get_active_conversation():
-    """Return the active conversation, or None."""
-    return _active_conversation
+    """Return the conversation that claude.reply would currently target, or None.
+    NOTE: does not consume the pending-reply flag."""
+    if _pending_reply_recipient_id and _pending_reply_recipient_id in _conversations:
+        return _conversations[_pending_reply_recipient_id]
+    try:
+        active = sim_context.get_active_sim()
+        if active and active.sim_info:
+            rid = active.sim_info.sim_id
+            if rid in _conversations:
+                return _conversations[rid]
+    except Exception:
+        pass
+    if _last_active_recipient_id is not None and _last_active_recipient_id in _conversations:
+        return _conversations[_last_active_recipient_id]
+    return None
 
 
 def generate_call(callback=None, output=None):
@@ -1414,11 +1482,11 @@ use a generic reference like 'a coworker', 'my neighbor', 'this friend of mine' 
 
 def generate_reply(player_message, callback=None, output=None):
     """
-    Reply to the active conversation. The player's message is sent as their sim,
-    and the other sim responds in character.
+    Reply to the conversation the player most recently signalled intent for
+    (via Reply button or active sim selection), and the other sim responds.
     """
-    global _active_conversation
-    if not _active_conversation:
+    conversation = _take_conversation_for_reply()
+    if not conversation:
         msg = "No active conversation. Use claude.call or claude.text first to start one."
         if callback:
             callback(None, msg)
@@ -1426,9 +1494,9 @@ def generate_reply(player_message, callback=None, output=None):
             notifications.show_error(msg, output=output)
         return
 
-    contact = _active_conversation["contact"]
-    history = _active_conversation["history"]
-    recipient = _active_conversation.get("recipient")
+    contact = conversation["contact"]
+    history = conversation["history"]
+    recipient = conversation.get("recipient")
 
     # Add the player's message to history
     history.append({"role": "you", "text": player_message})
@@ -1509,8 +1577,10 @@ def send_text(contact, player_message, callback=None, output=None):
     main_name = main_si.first_name if main_si else "your Sim"
     other_name = contact["name"]
 
-    _start_conversation(contact, "")
-    _active_conversation["history"] = [{"role": "you", "text": player_message}]
+    # Seed the conversation with the player's outgoing message as turn 1
+    _start_conversation(contact, "", recipient_sim=main_si)
+    rid = main_si.sim_id if (main_si and getattr(main_si, "sim_id", None)) else 0
+    _conversations[rid]["history"] = [{"role": "you", "text": player_message}]
 
     language = config.get_language()
     system = _REPLY_SYSTEM.format(
@@ -1539,7 +1609,8 @@ def send_text(contact, player_message, callback=None, output=None):
     def _on_send_text_result(text, error):
         if text:
             text = _apply_mood_from_text(text, reason="Text from " + other_name)
-            _active_conversation["history"].append({"role": "them", "text": text})
+            if rid in _conversations:
+                _conversations[rid]["history"].append({"role": "them", "text": text})
             journal.add_entry(
                 "text",
                 f"Text conversation with {other_name}:\n"
@@ -1577,8 +1648,9 @@ def send_call(contact, player_topic, callback=None, output=None):
     main_name = main_si.first_name if main_si else "your Sim"
     other_name = contact["name"]
 
-    _start_conversation(contact, "")
-    _active_conversation["history"] = [{"role": "you", "text": player_topic}]
+    _start_conversation(contact, "", recipient_sim=main_si)
+    rid = main_si.sim_id if (main_si and getattr(main_si, "sim_id", None)) else 0
+    _conversations[rid]["history"] = [{"role": "you", "text": player_topic}]
 
     language = config.get_language()
     system = _CALL_SYSTEM.format(language=language)
@@ -1602,7 +1674,8 @@ def send_call(contact, player_topic, callback=None, output=None):
     def _on_send_call_result(text, error):
         if text:
             text = _apply_mood_from_text(text, reason="Call with " + other_name)
-            _active_conversation["history"].append({"role": "them", "text": text})
+            if rid in _conversations:
+                _conversations[rid]["history"].append({"role": "them", "text": text})
             journal.add_entry(
                 "call",
                 f"Call with {other_name}:\n"

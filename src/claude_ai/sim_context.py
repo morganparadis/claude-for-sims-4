@@ -146,11 +146,15 @@ def _read_relationship_for_target(rt, target_sim_id, sim_manager):
     # Get friendship/romance scores
     friendship, romance = 0, 0
 
-    # Try iterating the actual track objects on the relationship — gives us both
-    # friendship and romance scores reliably. Falls back to get_relationship_score
-    # which only returns one score (friendship by default).
+    # Locate the Relationship object — try several APIs since the access pattern
+    # varies across game versions.
+    rel = None
     try:
+        if hasattr(rt, "find_relationship"):
+            rel = rt.find_relationship(target_sim_id)
+    except Exception:
         rel = None
+    if rel is None:
         try:
             rel = rt.relationships[target_sim_id]
         except Exception:
@@ -158,8 +162,29 @@ def _read_relationship_for_target(rt, target_sim_id, sim_manager):
                 rel = rt._relationships[target_sim_id]
             except Exception:
                 pass
-        if rel is not None:
-            tracks = getattr(rel, "_relationship_tracks", None) or getattr(rel, "relationship_tracks", None)
+    if rel is None:
+        # Last resort: iterate
+        try:
+            container = getattr(rt, "_relationships", None) or getattr(rt, "relationships", None)
+            if container is not None:
+                items = container.values() if hasattr(container, "values") else container
+                for r in items:
+                    try:
+                        if (getattr(r, "sim_id_a", None) == target_sim_id or
+                            getattr(r, "sim_id_b", None) == target_sim_id):
+                            rel = r
+                            break
+                    except Exception:
+                        continue
+        except Exception:
+            pass
+
+    # Read both tracks from the relationship object
+    if rel is not None:
+        try:
+            tracks = (getattr(rel, "_relationship_tracks", None) or
+                      getattr(rel, "relationship_tracks", None) or
+                      getattr(rel, "tracks", None))
             if tracks:
                 track_iter = tracks.values() if hasattr(tracks, "values") else tracks
                 for track in track_iter:
@@ -172,11 +197,11 @@ def _read_relationship_for_target(rt, target_sim_id, sim_manager):
                             friendship = val
                     except Exception:
                         continue
-    except Exception:
-        pass
+        except Exception:
+            pass
 
-    # Fallback to single-score API if the track iteration didn't fill anything
-    if friendship == 0 and romance == 0:
+    # Fallback for friendship via the single-score API (doesn't help with romance)
+    if friendship == 0:
         try:
             fn = getattr(rt, "get_relationship_score", None)
             if fn:
@@ -198,15 +223,43 @@ def _read_relationship_for_target(rt, target_sim_id, sim_manager):
             is_platonic_now = True
             break
 
+    # Whitelist of meaningful relationship words. Bits that don't match any
+    # whitelisted word are internal/system bits and get dropped entirely
+    # (instead of showing as "bit NoLongerFriends" or "sentimentBit Actor CloseTo Target...").
+    _STATUS_WHITELIST = (
+        "Friend", "Friends", "Friendly", "Good", "Best", "BFF",
+        "Enemy", "Hate", "Despise", "Rival",
+        "Married", "Spouse", "Engaged", "Fiance",
+        "Crush", "Lover", "Soulmate", "Sweetheart", "Dating",
+        "Romantic", "Partner",
+        "Broken", "BrokenUp", "Ex", "Former", "Divorced",
+        "NoLonger", "Estranged", "Lost", "HasBeen",
+        "Sibling", "Brother", "Sister",
+        "Parent", "Mother", "Father", "Mom", "Dad",
+        "Child", "Son", "Daughter",
+        "Grandparent", "Grandfather", "Grandmother", "Granny", "Grandpa",
+        "Grandchild", "Grandson", "Granddaughter",
+        "Aunt", "Uncle", "Niece", "Nephew", "Cousin",
+        "Family", "Inlaw", "InLaw", "Acquaintance",
+    )
+
+    def _clean_status_label(bn):
+        stripped = bn.replace("RelationshipBit_", "").replace("Romantic_", "")
+        # Drop sentimentBit/familyRelationshipBitsAcquired and similar internal prefixes
+        parts = stripped.split("_")
+        kept = [p for p in parts if p in _STATUS_WHITELIST]
+        if kept:
+            # Combine adjacent tokens nicely (e.g. NoLonger + Friends -> "No Longer Friends")
+            return " ".join(kept).replace("NoLonger", "No Longer").replace("HasBeen", "Has Been").strip()
+        return ""
+
     # Filter out romantic bits if platonic-now is set OR romance score is 0
     bit_labels = []
     for bn in raw_bits:
         is_romantic = any(kw in bn for kw in _ROMANTIC_BITS)
         if is_romantic and (is_platonic_now or romance == 0):
             continue
-        label = (bn.replace("RelationshipBit_", "")
-                   .replace("Romantic_", "")
-                   .replace("_", " ").strip())
+        label = _clean_status_label(bn)
         if label and label not in bit_labels:
             bit_labels.append(label)
 

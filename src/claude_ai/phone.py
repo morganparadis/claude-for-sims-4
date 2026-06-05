@@ -1312,7 +1312,9 @@ def _describe_relationship(contact, recipient=None):
     status_low = status.lower().replace("_", "").replace(" ", "")
     is_ex = ("broken" in status_low or "ex" in status_low.split() or
              "former" in status_low or "divorced" in status_low)
-    if is_ex or (romance is not None and romance < 0):
+    is_estranged = ("nolonger" in status_low or "estranged" in status_low or
+                    "hasbeenfriends" in status_low or "lostfriends" in status_low)
+    if is_ex or is_estranged or (romance is not None and romance < 0):
         parts.append(
             "RELATIONSHIP STATUS NOTE: This is a former romantic relationship — "
             "they are NOT currently dating/together. Any past affectionate or flirty "

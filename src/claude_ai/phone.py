@@ -120,9 +120,12 @@ Age (match the caller's age stage):
 Traits add flavor on top (Hot-Headed rants, Goofball jokes, Snob condescends, Loner is terse).
 
 # What to write
-2-3 SHORT lines of dialogue, prefixed with the caller's first name. One topic. \
-Your FIRST line must contain a specific, concrete piece of information or question — \
-NEVER a vague observation about feelings, distance, time, or the relationship's vibe.
+2-3 SHORT lines of dialogue, no speaker prefix or label. Plain dialogue lines only. \
+NEVER have the caller introduce themselves by name ("Apollo here!", "It's Dad!") — \
+caller ID exists; family and friends know who's calling. Just speak naturally as if \
+the recipient already knows who they are. One topic. Your FIRST line must contain a \
+specific, concrete piece of information or question — NEVER a vague observation about \
+feelings, distance, time, or the relationship's vibe.
 
 The topic should usually be about the CALLER'S OWN LIFE — their day, a recent thought, \
 something they did/saw/want, a question for the player. INVENT concrete specifics: \
@@ -1214,6 +1217,17 @@ def _get_family_relationship(other_si, contact, recipient=None):
                 return male_or("Husband", "Wife")
             if any_bit("sibling", "brother", "sister"):
                 return male_or("Brother", "Sister")
+            # Directional family bits — the game encodes "Target IsXOf Actor" patterns
+            # which tell us unambiguously which sim has which role. These trump age.
+            if has_compact("targetisparentof") or has_compact("isparentof"):
+                # other_si is the Target, recipient is the Actor — Target is Actor's parent
+                return male_or("Father", "Mother")
+            if has_compact("targetischildof") or has_compact("ischildof"):
+                # Target is the child of Actor — other_si is the recipient's child
+                return male_or("Son", "Daughter")
+            if has_compact("targetissiblingof") or has_compact("issiblingof"):
+                return male_or("Brother", "Sister")
+
             # Generic parent/child LAST — the bit only tells us a parent-child
             # relationship exists; it doesn't tell us who's the parent. Use age
             # to determine direction (a younger sim is the child, older is the parent).

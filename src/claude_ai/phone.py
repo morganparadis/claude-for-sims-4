@@ -210,11 +210,8 @@ Format your response as:
 <line 1>
 <line 2>
 <line 3, optional>
-MOOD: <emotion>
 
-The MOOD line is the LAST line, on its own, no formatting. Emotion is one of: \
-happy, confident, flirty, inspired, focused, energized, playful, sad, angry, tense, \
-embarrassed, bored, uncomfortable, dazed."""
+Just the spoken lines, nothing else."""
 
 _TEXT_SYSTEM = """You write text messages from a Sim in The Sims 4 to the player's sim. \
 Stay in character as the sender. Write in {language}.
@@ -335,11 +332,8 @@ no `---` separators, no labels like "Message 1:" or "Text 2:". Just the messages
 Format your response as:
 <message 1 text>
 <message 2 text, optional, on its own line>
-MOOD: <emotion>
 
-The MOOD line is the LAST line, on its own, no formatting. Emotion is one of: \
-happy, confident, flirty, inspired, focused, energized, playful, sad, angry, tense, \
-embarrassed, bored, uncomfortable, dazed."""
+Just the messages, nothing else."""
 
 _REPLY_SYSTEM = """You write a Sim's reply to a text from the player's sim in The Sims 4. \
 Stay in character as {other_name} replying to {main_name}. Write in {language}.
@@ -375,41 +369,10 @@ PLAIN TEXT ONLY. No markdown, no `**bold**`, no `---` separators, no "Message 1:
 Format your response as:
 <message 1 text>
 <message 2 text, optional>
-MOOD: <emotion>
 
-Emotion is one of: happy, confident, flirty, inspired, focused, energized, playful, sad, \
-angry, tense, embarrassed, bored, uncomfortable, dazed. This is the emotion {main_name} feels."""
+Just the messages, nothing else."""
 
 
-# Moods that are emotionally strong enough to warrant a moodlet even when
-# the message was solicited (a reply to the player's text/call). Bland moods
-# like "happy" or "focused" only apply on UNSOLICITED incoming calls/texts,
-# to avoid stacking weak buffs every time the player has a back-and-forth.
-_CHARGED_MOODS = {
-    "sad", "angry", "flirty", "embarrassed",
-    "tense", "uncomfortable", "dazed",
-}
-
-
-def _apply_mood_from_text(text, reason=None, recipient=None, is_incoming=False):
-    """Extract MOOD tag from text, apply the moodlet to the recipient, return cleaned text.
-
-    is_incoming=True for unsolicited calls/texts (auto-events) — always applies the
-    moodlet. is_incoming=False for replies and the contact's response to a call/text
-    the player initiated — only applies if the mood is emotionally charged.
-    """
-    clean_text, mood_tag = moodlets.extract_mood_tag(text)
-    if mood_tag:
-        should_apply = is_incoming or mood_tag.strip().lower() in _CHARGED_MOODS
-        if should_apply:
-            target = recipient or sim_context.get_main_sim_info()
-            if not target:
-                active = sim_context.get_active_sim()
-                if active:
-                    target = active.sim_info
-            if target:
-                moodlets.apply_mood(target, mood_tag, reason=reason)
-    return clean_text
 
 
 # Ages eligible to receive phone calls and texts (teen and above)
@@ -1712,7 +1675,7 @@ use a generic reference like 'a coworker', 'my neighbor', 'this friend of mine' 
     def _on_result(text, error):
         title = f"Call from {contact['name']}"
         if text:
-            text = _apply_mood_from_text(text, reason="Call from " + contact["name"], recipient=recipient, is_incoming=True)
+            text = moodlets.clean_response(text)
             _start_conversation(contact, text, recipient_sim=recipient)
             journal.add_entry("call", f"Call from {contact['name']} (to {recipient_name}):\n{text}", sim_name=contact["name"], recipient_name=recipient_name)
             caller_si = contact.get("sim_info")
@@ -1784,7 +1747,7 @@ use a generic reference like 'a coworker', 'my neighbor', 'this friend of mine' 
     def _on_result(text, error):
         title = f"Text from {contact['name']}"
         if text:
-            text = _apply_mood_from_text(text, reason="Text from " + contact["name"], recipient=recipient, is_incoming=True)
+            text = moodlets.clean_response(text)
             _start_conversation(contact, text, recipient_sim=recipient)
             journal.add_entry("text", f"Text from {contact['name']} (to {recipient_name}):\n{text}", sim_name=contact["name"], recipient_name=recipient_name)
             sender_si = contact.get("sim_info")
@@ -1861,7 +1824,7 @@ def generate_reply(player_message, callback=None, output=None):
 
     def _on_result(text, error):
         if text:
-            text = _apply_mood_from_text(text, reason="Reply from " + other_name, recipient=recipient)
+            text = moodlets.clean_response(text)
             history.append({"role": "them", "text": text})
             journal.add_entry(
                 "text",
@@ -1934,7 +1897,7 @@ def send_text(contact, player_message, callback=None, output=None):
 
     def _on_send_text_result(text, error):
         if text:
-            text = _apply_mood_from_text(text, reason="Text from " + other_name)
+            text = moodlets.clean_response(text)
             if rid in _conversations:
                 _conversations[rid]["history"].append({"role": "them", "text": text})
             journal.add_entry(
@@ -1999,7 +1962,7 @@ def send_call(contact, player_topic, callback=None, output=None):
 
     def _on_send_call_result(text, error):
         if text:
-            text = _apply_mood_from_text(text, reason="Call with " + other_name)
+            text = moodlets.clean_response(text)
             if rid in _conversations:
                 _conversations[rid]["history"].append({"role": "them", "text": text})
             journal.add_entry(

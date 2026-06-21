@@ -326,6 +326,76 @@
   <p class="muted">A typical session of ~30 Haiku commands costs around $0.15. A heavier session with multiple Opus story/storyline generations usually lands between $0.50 and $1.50. You can set every command to use Haiku in the config to cut costs by roughly 20× if you don't need long-form narration.</p>
 </section>
 
+<section class="changelog container">
+  <h2>What's new</h2>
+  <p class="muted">Recent changes from the dev branch — the mod's actively maintained.</p>
+
+  <ol class="changelog-list">
+
+    <li class="changelog-entry">
+      <div class="changelog-date">June 21, 2026</div>
+      <div class="changelog-body">
+        <h3>Mac support</h3>
+        <ul>
+          <li>The compiled mod now works on macOS — same install path, same commands. Drop it into <code>Documents/Electronic Arts/The Sims 4/Mods/</code> and you're done.</li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="changelog-entry">
+      <div class="changelog-date">June 14, 2026</div>
+      <div class="changelog-body">
+        <h3>Voice fidelity overhaul</h3>
+        <ul>
+          <li>Enemies and sims who actively dislike you now actually <em>sound</em> like it — cutting, dismissive, no fake warmth. Past warm chat history no longer overrides current relationship status.</li>
+          <li>Friendship tiers (best friends → enemies) have explicit voice rules baked into the prompt for consistency across calls, texts, and replies.</li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="changelog-entry">
+      <div class="changelog-date">June 13, 2026</div>
+      <div class="changelog-body">
+        <h3>No more pets in your contacts</h3>
+        <ul>
+          <li>Dogs, cats, horses, and other non-human sims are now filtered out of the call/text picker. Your cat will never text you again.</li>
+          <li>Moodlet feature removed — Sims 4 buffs always carry baked-in narrative (a "Happy" buff might say "New Baby!" when you don't have one). It was misleading more than helpful.</li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="changelog-entry">
+      <div class="changelog-date">June 6, 2026</div>
+      <div class="changelog-body">
+        <h3>Startup and auto-events hardening</h3>
+        <ul>
+          <li>The first auto-call/text fires within ~10 seconds of landing in a household instead of the previous 2-minute stagger.</li>
+          <li>Startup notification no longer spams the log when the game is still loading.</li>
+          <li>New <code>claude.fire_auto</code> cheat command to manually trigger the auto-event picker for testing.</li>
+        </ul>
+      </div>
+    </li>
+
+  </ol>
+
+  <p class="changelog-footer">
+    <a href="https://github.com/morganparadis/claude-for-sims-4/commits/main" target="_blank" rel="noopener">See the full commit history on GitHub →</a>
+  </p>
+</section>
+
+<section class="bugreport container">
+  <div class="bugreport-card">
+    <h2>Found a bug? Tell me.</h2>
+    <p>
+      The mod is actively maintained and bug reports get read. Use the form below
+      and you'll be filling out a GitHub issue with structured fields (what happened,
+      log excerpt, screenshots) — no GitHub experience required, just sign in.
+    </p>
+    <a class="btn btn-ghost-orange" href="https://github.com/morganparadis/claude-for-sims-4/issues/new?template=bug_report.yml" target="_blank" rel="noopener">Report a bug</a>
+    <p class="muted small">Or browse <a href="https://github.com/morganparadis/claude-for-sims-4/issues" target="_blank" rel="noopener">existing reports</a> first to check if it's already known.</p>
+  </div>
+</section>
+
 <section class="support container">
   <div class="support-card">
     <h2>Love the mod? Support it on Patreon.</h2>

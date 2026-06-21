@@ -1,0 +1,92 @@
+name: Bug report
+description: Something went wrong in-game — broken text, crash, missing moodlet, weird behaviour, etc.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! The more detail you can
+        share, the faster it gets fixed. Logs and screenshots help a lot.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe what went wrong. Be specific — which command did you run, what did you expect, what did you see instead?
+      placeholder: I ran `claude.text` and the message had a weird symbol at the end…
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can someone else trigger this? Write it as a list if possible.
+      placeholder: |
+        1. Loaded my Woodruff household
+        2. Ran `claude.text`
+        3. Got a text from my mother-in-law about a baby I don't have
+    validations:
+      required: false
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: What platform are you on?
+      options:
+        - Windows
+        - Mac
+        - Linux (via Proton/Wine — unsupported but listed for completeness)
+    validations:
+      required: true
+
+  - type: input
+    id: mod-version
+    attributes:
+      label: Mod version
+      description: Run `claude.status` in the cheat console — the version is on the first line.
+      placeholder: e.g. 1.1.0
+    validations:
+      required: false
+
+  - type: input
+    id: sims-packs
+    attributes:
+      label: Any relevant Sims 4 packs / other mods?
+      description: e.g. you noticed this only happens with a Horse Ranch sim, or after installing MCCC.
+      placeholder: e.g. Horse Ranch, Cats & Dogs, MCCC v9.0
+    validations:
+      required: false
+
+  - type: textarea
+    id: log-excerpt
+    attributes:
+      label: Log excerpt (optional but very helpful)
+      description: |
+        Paste relevant lines from `Documents/ClaudeAI_Log.txt`. Look for
+        lines near the time the bug happened. Wrap in triple backticks for formatting.
+      placeholder: |
+        ```
+        [2026-06-21 09:00:01] [auto_events] Firing auto-event: text
+        [2026-06-21 09:00:02] ...
+        ```
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots (optional)
+      description: Drag and drop images directly into this field if you have any.
+    validations:
+      required: false
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Other context that might help — config tweaks you've made, recent changes to your save, etc.
+    validations:
+      required: false

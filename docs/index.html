@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude AI for The Sims 4 — AI-powered phone calls, texts, and stories</title>
+  <meta name="description" content="A mod that brings Claude AI to The Sims 4. Random in-character phone calls, text conversations, story updates, random events, and storylines — all generated live based on your household.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="container hero-inner">
+    <div class="plumbob" aria-hidden="true">
+      <svg viewBox="0 0 60 80" width="64" height="84">
+        <defs>
+          <linearGradient id="plumbobGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#d6f896"/>
+            <stop offset="55%" stop-color="#86d33b"/>
+            <stop offset="100%" stop-color="#4d931a"/>
+          </linearGradient>
+          <linearGradient id="plumbobShine" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="rgba(255,255,255,0.85)"/>
+            <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+          </linearGradient>
+        </defs>
+        <polygon points="30,2 58,40 30,78 2,40" fill="url(#plumbobGrad)" stroke="#3a7012" stroke-width="2"/>
+        <polygon points="30,10 50,40 30,52 10,40" fill="url(#plumbobShine)"/>
+      </svg>
+    </div>
+    <h1>Claude AI for The Sims 4</h1>
+    <p class="tagline">Phone calls, texts, stories, and drama — generated live for your Sims by Claude AI.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/morganparadis/claude-for-sims-4">Get it on GitHub</a>
+      <a class="btn btn-ghost" href="#features">See what it does</a>
+    </div>
+    <div class="badges">
+      <span class="badge">Free &amp; open source</span>
+      <span class="badge">Bring your own API key</span>
+      <span class="badge">Windows 10+</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<section class="intro container">
+  <h2>It's like having a writer for your save file.</h2>
+  <p>
+    Every command reads what's actually happening in your game — who lives in the household,
+    their traits, their relationships, their mood, where they are — and sends it to Claude as
+    context. The AI doesn't make up sims that don't exist or invent jobs they don't have. It
+    writes for the people in front of it.
+  </p>
+  <p>
+    A flirty teen texts in lowercase with emoji. An elder writes long, warm paragraphs. A
+    grandparent dotes; an enemy sneers. A Goofball cracks jokes mid-call. The voice fits.
+  </p>
+</section>
+
+<section id="features" class="features container">
+  <h2>What it does</h2>
+  <div class="feature-grid">
+
+    <article class="feature-card">
+      <div class="feature-icon icon-call" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+      </div>
+      <h3>Phone Calls</h3>
+      <p>Random sims call you in character — your kid's friend, your boss, your ex. Each voice shaped by traits, age, mood, and your shared history.</p>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon icon-text" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </div>
+      <h3>Text Messages</h3>
+      <p>Quick check-ins, group drama, gossip. Hit Reply on the popup and they keep the conversation going — full back-and-forth, in character.</p>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon icon-story" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+      </div>
+      <h3>Story Updates</h3>
+      <p>Soap-opera narration of what's happening in your household, written like a let's-play. Continues from past entries so it builds across sessions.</p>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon icon-event" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <h3>Random Events</h3>
+      <p>Surprises that fit your sims' actual lives — promotions, fights, weird neighbours, family secrets. Always actionable; tells you exactly what to do next.</p>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon icon-storyline" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      </div>
+      <h3>Storylines</h3>
+      <p>Multi-session 3-act arcs with concrete gameplay goals — raise a skill, hit a career level, complete an aspiration. Pick a theme or let Claude pick one.</p>
+    </article>
+
+    <article class="feature-card">
+      <div class="feature-icon icon-auto" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <h3>Auto-Events</h3>
+      <p>Sits quietly in the background and fires content while you play. Set the interval, set the mix (calls, texts, stories, events), forget about it.</p>
+    </article>
+
+  </div>
+</section>
+
+<section class="screenshot-strip">
+  <div class="container">
+    <h2>One mod, every voice.</h2>
+    <p class="muted">Same code, totally different writing — Claude adapts to each sim's age, traits, and how they feel about you. Here are real texts from the same save:</p>
+    <div class="screenshot-grid">
+
+      <figure class="screenshot">
+        <img src="img/friendexample.jpg" alt="Text message from a close friend in casual, candid tone">
+        <figcaption><strong>From a close friend</strong><br><span class="muted small">Casual, candid, easy banter.</span></figcaption>
+      </figure>
+
+      <figure class="screenshot">
+        <img src="img/grandpaexample.jpg" alt="Text message from a grandparent in warm, doting tone">
+        <figcaption><strong>From a grandparent</strong><br><span class="muted small">Doting, warm, full sentences.</span></figcaption>
+      </figure>
+
+      <figure class="screenshot">
+        <img src="img/elderexample.jpg" alt="Text message from an elder sim in formal tone">
+        <figcaption><strong>From an elder</strong><br><span class="muted small">Formal, careful, no slang.</span></figcaption>
+      </figure>
+
+      <figure class="screenshot">
+        <img src="img/partnerexample.PNG" alt="Text message from an elder partner — warm, affectionate, full sentences">
+        <figcaption><strong>From a partner</strong><br><span class="muted small">Warm, affectionate, age-appropriate tone.</span></figcaption>
+      </figure>
+
+      <figure class="screenshot">
+        <img src="img/meanexample.PNG" alt="Text message from an enemy in cold, hostile tone">
+        <figcaption><strong>From an enemy</strong><br><span class="muted small">Cold, dismissive, no warmth.</span></figcaption>
+      </figure>
+
+      <figure class="screenshot">
+        <img src="img/babyexample.jpg" alt="Phone call from an infant babbling goo goo ga ga">
+        <figcaption><strong>Unpredictable moments</strong><br><span class="muted small">Yes, the baby called. Yes, it was babbling.</span></figcaption>
+      </figure>
+
+    </div>
+  </div>
+</section>
+
+<section class="commands container">
+  <h2>Commands at a glance</h2>
+  <p class="muted">Open the cheat console with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>, type a command, press Enter.</p>
+  <div class="cmd-grid">
+    <div class="cmd-group">
+      <h3>Phone</h3>
+      <ul>
+        <li><code>claude.call</code> &mdash; incoming call</li>
+        <li><code>claude.text</code> &mdash; incoming text</li>
+        <li><code>claude.sendtext Bella Goth hey!</code></li>
+        <li><code>claude.sendcall Bella Goth I have news</code></li>
+        <li><code>claude.reply &lt;message&gt;</code></li>
+      </ul>
+    </div>
+    <div class="cmd-group">
+      <h3>Storytelling</h3>
+      <ul>
+        <li><code>claude.story</code> &mdash; narrative update</li>
+        <li><code>claude.storyline</code> &mdash; 3-act arc</li>
+        <li><code>claude.storyline_theme romance</code></li>
+        <li><code>claude.drama</code> &mdash; household drama</li>
+        <li><code>claude.dialogue</code> &mdash; in-character lines</li>
+      </ul>
+    </div>
+    <div class="cmd-group">
+      <h3>Events &amp; goals</h3>
+      <ul>
+        <li><code>claude.event</code> &mdash; random event</li>
+        <li><code>claude.goals</code> &mdash; session goals</li>
+        <li><code>claude.challenge</code> &mdash; gameplay challenge</li>
+        <li><code>claude.auto_events on</code></li>
+      </ul>
+    </div>
+    <div class="cmd-group">
+      <h3>System</h3>
+      <ul>
+        <li><code>claude.status</code> &mdash; setup &amp; all commands</li>
+        <li><code>claude.chat &lt;message&gt;</code> &mdash; freeform</li>
+        <li><code>claude.journal</code> &mdash; recent history</li>
+        <li><code>claude.reload</code> &mdash; after editing config</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="install container">
+  <h2>Get started</h2>
+  <ol class="install-steps">
+    <li>
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Download the mod</h3>
+        <p>Grab the latest release from the <a href="https://github.com/morganparadis/claude-for-sims-4">downloads page</a>. You need two files: <code>ClaudeAI.ts4script</code> and <code>claude_config.cfg</code>.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Get your Claude API key</h3>
+        <p>The mod uses Claude (made by Anthropic) to write the dialogue and stories. You need your own API key — it's free to sign up, and you only pay for what you use. <strong>A whole evening of play is usually 25&ndash;50 cents.</strong></p>
+
+        <div class="callout">
+          <h4>Step-by-step: getting your API key</h4>
+          <ol class="api-substeps">
+            <li>
+              <strong>Go to <a href="https://console.anthropic.com/" target="_blank" rel="noopener">console.anthropic.com</a></strong> and click <em>Sign up</em>. Use Google or your email — both work fine.
+            </li>
+            <li>
+              <strong>Verify your email and phone number</strong> if Anthropic asks. This is a one-time anti-spam check.
+            </li>
+            <li>
+              <strong>Add a credit card and buy a little credit.</strong> Anthropic needs a card on file before they'll let you use the API. Go to <em>Settings &rarr; Billing</em> and add <strong>$5</strong> (the minimum). That's enough for thousands of in-game calls and texts — most players never come close to using it up in a month.
+            </li>
+            <li>
+              <strong>Create the key.</strong> In the left sidebar click <em>API Keys</em> (or go to <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com/settings/keys</a>), then click the <em>Create Key</em> button.
+            </li>
+            <li>
+              <strong>Name it something memorable</strong> like "Sims 4 mod" and click <em>Create</em>.
+            </li>
+            <li>
+              <strong>Copy the key immediately and keep it private.</strong> It looks like <code>sk-ant-api03-…</code> followed by a long string. <strong>You only see it once</strong> &mdash; if you close the dialog without copying, you'll need to make a new one.
+              <div class="warning-box">
+                <strong>Treat this key like a password.</strong> Anyone who has it can spend money on your Anthropic account.
+                <ul>
+                  <li>Save it in a <strong>password manager</strong> (1Password, Bitwarden, your browser's saved passwords) — not in a plain text file on your desktop.</li>
+                  <li><strong>Never paste it in Discord, Reddit, GitHub, screenshots, or any chat</strong> — even private DMs aren't safe long-term.</li>
+                  <li>If it ever leaks, go to <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">the API keys page</a>, revoke the old key, and make a new one.</li>
+                </ul>
+              </div>
+            </li>
+          </ol>
+          <p class="callout-note">That's it for the Anthropic side &mdash; the key is yours. Keep it safe.</p>
+        </div>
+      </div>
+    </li>
+
+    <li>
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>Drop the mod files in your Mods folder</h3>
+        <p>Move both downloaded files into:</p>
+        <pre><code>Documents/Electronic Arts/The Sims 4/Mods/</code></pre>
+        <p class="muted">If you have Sims 4 mods already, you've been here before — same folder.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <h3>Paste your API key into the config</h3>
+        <p>Open <code>claude_config.cfg</code> with any text editor (Notepad, VS Code, TextEdit on Mac). Find this line near the top:</p>
+        <pre><code>api_key = YOUR_API_KEY_HERE</code></pre>
+        <p>Replace <code>YOUR_API_KEY_HERE</code> with the key you copied. It should look like:</p>
+        <pre><code>api_key = sk-ant-api03-Xy7…(your full key)…</code></pre>
+        <p>Save the file.</p>
+      </div>
+    </li>
+
+    <li>
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <h3>Enable script mods &amp; launch the game</h3>
+        <p>In The Sims 4, open <em>Game Options &rarr; Other</em> and tick both:</p>
+        <ul class="checkbox-list">
+          <li>Enable Custom Content and Mods</li>
+          <li>Script Mods Allowed</li>
+        </ul>
+        <p>Restart the game. When the main menu loads, you'll see a notification popup confirming the mod is active.</p>
+        <p>Inside any household, open the cheat console with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd> and type <code>claude.status</code> to see all the commands and confirm everything's wired up.</p>
+      </div>
+    </li>
+  </ol>
+</section>
+
+<section class="cost container">
+  <h2>How much does it cost?</h2>
+  <p>
+    You pay Anthropic directly for the API calls — there's no subscription to me or anyone else.
+    Rough estimates per command:
+  </p>
+  <table class="cost-table">
+    <thead>
+      <tr><th>What</th><th>Model</th><th>Per call</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Calls, texts, events, dialogue, goals</td><td>Haiku</td><td>~$0.001</td></tr>
+      <tr><td>Story, storyline, drama</td><td>Opus</td><td>~$0.01&ndash;0.02</td></tr>
+      <tr><td>Freeform chat</td><td>Opus</td><td>~$0.005&ndash;0.01</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">A long session with 30+ commands plus auto-events usually lands between $0.20 and $0.50.</p>
+</section>
+
+<section class="support container">
+  <div class="support-card">
+    <h2>Love the mod? Support it on Patreon.</h2>
+    <p>
+      The mod is free and always will be. If it's making your save more fun, throwing a few dollars on
+      Patreon helps me keep building it — new features, bug fixes, and weirder ideas like AI-generated
+      neighbours and on-the-fly storylines.
+    </p>
+    <p>
+      Patrons also get early access to new features, occasional polls on what to build next, and a
+      direct line to me for bug reports and requests.
+    </p>
+    <a class="btn btn-pink" href="https://www.patreon.com/c/morgkorg" target="_blank" rel="noopener">Become a patron</a>
+
+    <div class="bitcoin-block">
+      <p class="bitcoin-label">Prefer Bitcoin? Scan to donate:</p>
+      <img class="bitcoin-qr" src="img/bitcoincode.png" alt="Bitcoin donation QR code">
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div>
+      <strong>Claude AI for The Sims 4</strong>
+      <p class="muted">An open-source script mod. Not affiliated with EA, Maxis, or Anthropic.</p>
+    </div>
+    <div class="footer-links">
+      <a href="https://github.com/morganparadis/claude-for-sims-4">GitHub</a>
+      <a href="https://github.com/morganparadis/claude-for-sims-4/blob/main/README.md">README</a>
+      <a href="https://console.anthropic.com/" target="_blank" rel="noopener">Get an API key</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

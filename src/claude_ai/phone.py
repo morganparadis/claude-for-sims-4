@@ -126,8 +126,17 @@ Grandparent → grandchild: dotes, fuller sentences, may ramble warmly.
 If NO family role is listed the caller is a friend/coworker/acquaintance — peer-style \
 openers are fine and family terms like "mom"/"dad"/"son"/"daughter" are FORBIDDEN.
 
-Modify warmth across all of these by friendship score: high = warm, low = stilted, \
-negative = hostile.
+Friendship tone — CRITICAL. The "How they feel about the player" line is the LAW. \
+If past chat contradicts the current label, assume a falling-out happened since — \
+CURRENT status overrides past tone. By tier:
+- friends / close / best friends: warm, glad to be in touch
+- friendly acquaintances: polite, normal
+- have some negative history: cool, brief, no warmth
+- actively dislike each other: cold, dismissive, may snipe; no warmth ANYWHERE
+- enemies: OPENLY HOSTILE — cutting, snarky, dismissive, contemptuous. NEVER \
+  apologizes, NEVER mends, NEVER says "rooting for you" / "happy for you" / \
+  "always have been" / "I would never" / "I miss you" / "hope you're well". \
+  An enemy responding to good news is sarcastic or competitive, not supportive.
 
 Age (match the caller's age stage, but family role wins where they conflict):
 - Teen: dramatic, slang
@@ -254,8 +263,17 @@ or sends an embarrassingly long message. Older sims text in fuller sentences.
 If NO family role is listed, the sender is a friend/coworker/acquaintance — and the \
 peer-style "hey man" / "what's up" register is fine.
 
-Modify warmth across all of these by friendship score: high = warm, low = stilted, \
-negative = hostile.
+Friendship tone — CRITICAL. The "How they feel about the player" line is the LAW. \
+If past chat contradicts the current label, assume a falling-out happened since — \
+CURRENT status overrides past tone. By tier:
+- friends / close / best friends: warm, glad to be in touch
+- friendly acquaintances: polite, normal
+- have some negative history: cool, brief, no warmth
+- actively dislike each other: cold, dismissive, may snipe; no warmth ANYWHERE
+- enemies: OPENLY HOSTILE — cutting, snarky, dismissive, contemptuous. NEVER \
+  apologizes, NEVER mends, NEVER says "rooting for you" / "happy for you" / \
+  "always have been" / "I would never" / "I miss you" / "hope you're well". \
+  An enemy responding to good news is sarcastic or competitive, not supportive.
 
 Age (match the sender's age stage, but family role wins where they conflict):
 - Teen: lowercase, abbreviations, lots of emoji. "omggg no way 😭"
@@ -339,12 +357,30 @@ _REPLY_SYSTEM = """You write a Sim's reply to a text from the player's sim in Th
 Stay in character as {other_name} replying to {main_name}. Write in {language}.
 
 # Voice
-{other_name}'s family role to {main_name}, age stage, and traits define how they reply.
+{other_name}'s family role to {main_name}, age stage, traits, AND the
+"How they feel about the player" line define how they reply.
 
 Family role locks the voice (Father = dad voice, Sibling = teasing, Spouse = intimate). \
-Warmth scales by friendship score: high = warm, low = stilted, negative = hostile. \
 Adults use full sentences and proper punctuation, no youth slang. Teens use lowercase \
 and emoji. Elders are formal and warm.
+
+# Friendship tone — CRITICAL, READ CAREFULLY
+The "How they feel about the player" line is the LAW. Match it strictly. \
+If past chat history contradicts the current label (e.g. old warm messages but \
+they're now "enemies"), assume a falling-out happened SINCE then — the CURRENT \
+status overrides past tone. Don't keep being warm because old messages were warm.
+
+By tier:
+- "best friends, very close" / "close friends" / "friends, get along well": warm, easy, glad to hear from them
+- "friendly acquaintances": polite, friendly, normal
+- "have some negative history": cool, brief, slightly stilted; no warmth
+- "actively dislike each other": cold, dismissive, short replies, may snipe; no warmth ANYWHERE
+- "enemies": OPENLY HOSTILE. Cutting, snarky, dismissive, may insult or mock. \
+  Treats the message with contempt. Refuses help. Zero warmth. NEVER apologizes, \
+  NEVER mends, NEVER says "rooting for you" / "happy for you" / "always have been" / \
+  "I would never" / "I miss you/us" / "hope you're well". An enemy responding to "things \
+  are great" would be sarcastic ("congrats, like I care") or competitive ("good for you, \
+  meanwhile I'm crushing it") — never supportive.
 
 # What to write
 1-2 SHORT messages, max 2 sentences each. React authentically to what {main_name} said — \
@@ -379,9 +415,25 @@ Just the messages, nothing else."""
 _PHONE_ELIGIBLE_AGES = ("TEEN", "YOUNGADULT", "YOUNG_ADULT", "ADULT", "ELDER")
 
 
-def _is_phone_eligible(sim_info):
-    """Return True if a sim is old enough to use a phone (teen+)."""
+def _is_human_sim(sim_info):
+    """Return True if this is a human sim (not a dog, cat, horse, fox, etc).
+    Sims 4 returns SpeciesType.HUMAN for humans, LARGE_DOG/SMALL_DOG/CAT/HORSE/FOX for pets.
+    If the species attribute is missing (very old saves), assume human."""
     try:
+        species = getattr(sim_info, "species", None)
+        if species is None:
+            return True
+        species_str = str(species).replace("SpeciesType.", "").upper().replace(" ", "")
+        return species_str == "HUMAN"
+    except Exception:
+        return True
+
+
+def _is_phone_eligible(sim_info):
+    """Return True if a sim is human and old enough to use a phone (teen+)."""
+    try:
+        if not _is_human_sim(sim_info):
+            return False
         age_str = str(getattr(sim_info, "age", "")).replace("Age.", "").upper().replace(" ", "")
         return age_str in _PHONE_ELIGIBLE_AGES
     except Exception:
@@ -568,6 +620,9 @@ def _pick_random_relationship_sim(recipient=None):
             return None
         rels = sim_context.get_sim_relationships(active.sim_info)
         contacts = [r for r in rels if not r.get("in_household")]
+
+    # Filter out pets -- dogs, cats, horses, foxes don't text or call.
+    contacts = [c for c in contacts if _is_human_sim(c.get("sim_info"))]
 
     # Filter out ghosts unless config allows them
     allow_ghosts = config.get_config().getboolean("claude_ai", "phone_allow_ghosts", fallback=True)

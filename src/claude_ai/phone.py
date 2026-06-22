@@ -831,6 +831,22 @@ def _describe_recipient(recipient_sim, contact=None):
         parts.append(f"\n{recipient_sim.first_name}'s household:")
         parts.extend(household_lines)
 
+    # Surface any recent milestones for the recipient so the caller can
+    # plausibly reference them ("hey congrats on the promotion!").
+    try:
+        from . import milestones as _milestones
+        mblock = _milestones.format_for_prompt(recipient_sim)
+        if mblock:
+            # Re-label so the LLM understands these are events in the
+            # recipient's life, not the caller's.
+            mblock = mblock.replace(
+                "Recent in their life:",
+                f"Recent in {recipient_sim.first_name}'s life (you may know about these):",
+            )
+            parts.append("\n" + mblock)
+    except Exception:
+        pass
+
     return "\n".join(parts)
 
 
@@ -1645,6 +1661,17 @@ def _describe_relationship(contact, recipient=None):
 
     if contact.get("in_household") is True:
         parts.append("Lives in the same household as the player")
+
+    # Recent life events the sim might want to talk about (or that the
+    # player might bring up). Pulled from milestones tracker.
+    if si:
+        try:
+            from . import milestones as _milestones
+            mblock = _milestones.format_for_prompt(si)
+            if mblock:
+                parts.append(mblock)
+        except Exception:
+            pass
 
     return "\n".join(parts)
 

@@ -123,8 +123,13 @@ try:
                 if not client or not getattr(client, "active_sim", None):
                     continue
 
-                from . import notifications, config
+                from . import notifications, config, milestones
                 _log(f"Game client ready (attempt {attempt + 1}), showing startup notification.")
+
+                # Scan the household + relationship network for life events
+                # that happened since last play session. Runs on its own
+                # daemon thread; non-blocking.
+                milestones.start_background_scan()
 
                 # Check for a newer release on GitHub. Short timeout so the
                 # popup doesn't hang waiting on a slow network.

@@ -7,6 +7,7 @@ Texts show as phone dialogs with buzz.
 Players can reply with claude.reply <message> to continue the conversation.
 """
 import random
+import threading
 
 from . import api_client, sim_context, config, journal, notifications, moodlets
 
@@ -413,6 +414,54 @@ Just the messages, nothing else."""
 
 # Ages eligible to receive phone calls and texts (teen and above)
 _PHONE_ELIGIBLE_AGES = ("TEEN", "YOUNGADULT", "YOUNG_ADULT", "ADULT", "ELDER")
+
+# Personality traits that slow down or speed up text replies. Used by
+# _calculate_reply_delay to make texting feel realistic for each sim.
+_SLOW_REPLY_TRAITS = ("lazy", "loner", "gloomy", "snob", "unflirty", "perfectionist")
+_FAST_REPLY_TRAITS = ("active", "outgoing", "cheerful", "goofball", "romantic",
+                      "lovestruck", "hot_headed", "hotheaded")
+
+
+def _calculate_reply_delay(contact):
+    """How long (in seconds) the sim should 'think' before replying to a
+    player-initiated text. Adjusts the configured base range by friendship
+    closeness and personality traits. Returns 0 if delays are disabled."""
+    try:
+        if not config.get_reply_delay_enabled():
+            return 0
+    except Exception:
+        return 0
+
+    base_min = max(1, config.get_reply_delay_min_seconds())
+    base_max = max(base_min, config.get_reply_delay_max_seconds())
+    delay = random.randint(base_min, base_max)
+
+    # Closer relationships reply faster; hostile ones drag.
+    friendship = contact.get("friendship") or 0
+    if friendship >= 75:
+        delay = int(delay * 0.5)
+    elif friendship >= 45:
+        delay = int(delay * 0.7)
+    elif friendship < -70:
+        delay = int(delay * 2.0)
+    elif friendship < 0:
+        delay = int(delay * 1.5)
+
+    # Trait modifiers — pulled from the contact's sim_info if we have it.
+    sim_info = contact.get("sim_info")
+    if sim_info is not None:
+        try:
+            trait_names = [t.lower().replace(" ", "").replace("-", "_")
+                           for t in sim_context.get_sim_traits(sim_info, limit=10)]
+            if any(t in trait_names for t in _SLOW_REPLY_TRAITS):
+                delay = int(delay * 1.4)
+            if any(t in trait_names for t in _FAST_REPLY_TRAITS):
+                delay = int(delay * 0.7)
+        except Exception:
+            pass
+
+    # Floor at 5s so even best-friend texts feel like real typing, not psychic.
+    return max(5, delay)
 
 
 # Non-human species names to reject. We check by suffix so this works with
@@ -1921,14 +1970,29 @@ def generate_reply(player_message, callback=None, output=None):
     )
 
     def _on_result(text, error):
-        if text:
-            text = moodlets.clean_response(text)
-            history.append({"role": "them", "text": text})
+        if error:
+            # Errors fire immediately; no point delaying a failure popup.
+            if history and history[-1]["role"] == "you":
+                history.pop()
+            notifications.show_error(error, output=output)
+            if callback:
+                callback(text, error)
+            return
+        if not text:
+            if callback:
+                callback(text, error)
+            return
+
+        text_clean = moodlets.clean_response(text)
+        delay = _calculate_reply_delay(contact)
+
+        def _show_reply():
+            history.append({"role": "them", "text": text_clean})
             journal.add_entry(
                 "text",
                 f"Conversation with {other_name}:\n"
                 f"{main_name}: {player_message}\n"
-                f"{other_name}: {text}",
+                f"{other_name}: {text_clean}",
                 sim_name=other_name,
                 recipient_name=main_name,
             )
@@ -1936,16 +2000,16 @@ def generate_reply(player_message, callback=None, output=None):
             sender_si = contact.get("sim_info")
             shown = False
             if sender_si:
-                shown = _show_phone_dialog(sender_si, title, text, ring=False, recipient_sim_info=recipient)
+                shown = _show_phone_dialog(sender_si, title, text_clean, ring=False, recipient_sim_info=recipient)
             if not shown:
-                notifications.show(title, text, output=output)
-        elif error:
-            # Remove player message from history since the reply failed
-            if history and history[-1]["role"] == "you":
-                history.pop()
-            notifications.show_error(error, output=output)
-        if callback:
-            callback(text, error)
+                notifications.show(title, text_clean, output=output)
+            if callback:
+                callback(text_clean, None)
+
+        if delay > 0:
+            threading.Timer(delay, _show_reply).start()
+        else:
+            _show_reply()
 
     return api_client.call_claude_async(
         [{"role": "user", "content": prompt}],
@@ -1994,15 +2058,27 @@ def send_text(contact, player_message, callback=None, output=None):
     )
 
     def _on_send_text_result(text, error):
-        if text:
-            text = moodlets.clean_response(text)
+        if error:
+            notifications.show_error(error, output=output)
+            if callback:
+                callback(text, error)
+            return
+        if not text:
+            if callback:
+                callback(text, error)
+            return
+
+        text_clean = moodlets.clean_response(text)
+        delay = _calculate_reply_delay(contact)
+
+        def _show_reply():
             if rid in _conversations:
-                _conversations[rid]["history"].append({"role": "them", "text": text})
+                _conversations[rid]["history"].append({"role": "them", "text": text_clean})
             journal.add_entry(
                 "text",
                 f"Text conversation with {other_name}:\n"
                 f"{main_name}: {player_message}\n"
-                f"{other_name}: {text}",
+                f"{other_name}: {text_clean}",
                 sim_name=other_name,
                 recipient_name=main_name,
             )
@@ -2010,13 +2086,16 @@ def send_text(contact, player_message, callback=None, output=None):
             sender_si = contact.get("sim_info")
             shown = False
             if sender_si:
-                shown = _show_phone_dialog(sender_si, title, text, ring=False)
+                shown = _show_phone_dialog(sender_si, title, text_clean, ring=False)
             if not shown:
-                notifications.show(title, text, output=output)
-        elif error:
-            notifications.show_error(error, output=output)
-        if callback:
-            callback(text, error)
+                notifications.show(title, text_clean, output=output)
+            if callback:
+                callback(text_clean, None)
+
+        if delay > 0:
+            threading.Timer(delay, _show_reply).start()
+        else:
+            _show_reply()
 
     return api_client.call_claude_async(
         [{"role": "user", "content": prompt}],

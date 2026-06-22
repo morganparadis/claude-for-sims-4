@@ -119,3 +119,16 @@ def is_configured():
     return bool(key and key != "YOUR_API_KEY_HERE")
 
 
+def get_reply_delay_enabled():
+    """Should the sim 'think' for a few seconds before replying to player texts?"""
+    return get_config().getboolean("claude_ai", "reply_delay_enabled", fallback=True)
+
+
+def get_reply_delay_min_seconds():
+    return get_config().getint("claude_ai", "reply_delay_min_seconds", fallback=15)
+
+
+def get_reply_delay_max_seconds():
+    return get_config().getint("claude_ai", "reply_delay_max_seconds", fallback=90)
+
+

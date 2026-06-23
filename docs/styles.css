@@ -890,7 +890,7 @@ section > p { max-width: 780px; margin-left: auto; margin-right: auto; }
   color: var(--plumbob-dark);
 }
 .status-open {
-  background: rgba(224, 139, 89, 0.18);
+  background: rgba(224, 139, 89, 0.28);
   color: var(--claude-deep);
 }
 
@@ -917,6 +917,8 @@ section > p { max-width: 780px; margin-left: auto; margin-right: auto; }
 .roadmap-card-cta .btn {
   margin-top: 1rem;
   align-self: flex-start;
+  padding: 9px 20px;
+  font-size: 0.95rem;
 }
 
 /* -------- Bug report -------- */

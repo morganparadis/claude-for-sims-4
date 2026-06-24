@@ -515,9 +515,9 @@
       <div class="changelog-body">
         <h3>Enemies actually act like enemies (v1.1.1)</h3>
         <ul>
-          <li>Every call, text, and reply now leads with a "current tone" header in the prompt, naming the relationship explicitly (best friends, friends, acquaintances, enemies, etc.) — so the AI can't drift back to warm exchanges when the current relationship has soured.</li>
-          <li>Specifically fixes the case where an enemy sim would still text "congrats!" or "rooting for you" because the journal contained older friendly exchanges.</li>
-          <li>Works in both directions: close friends now consistently sound warm instead of flat just because past entries happened to be terse.</li>
+          <li>When the current friendship label disagrees with past entries (e.g. "enemies" now but the journal is full of friendly exchanges), the prompt annotates the journal block with a note that the warmth is obsolete — predates the falling-out.</li>
+          <li>Specifically fixes the case where an enemy sim still texts "congrats!" or "rooting for you" because the journal contained older friendly exchanges.</li>
+          <li>Doesn't touch storyline continuity — the model still sees the full recent history, just told to read it through the lens of the current relationship.</li>
         </ul>
       </div>
     </li>

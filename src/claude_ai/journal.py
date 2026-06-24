@@ -152,11 +152,15 @@ def get_sim_history(sim_name, n=6, recipient_name=None):
     return matched[-n:]
 
 
-def format_sim_history_for_prompt(sim_name, n=6, recipient_name=None):
+def format_sim_history_for_prompt(sim_name, n=6, recipient_name=None, trailing_note=None):
     """
     Return a prompt-friendly summary of recent interactions with a specific sim.
     If recipient_name is given, only includes history involving that recipient.
     Returns empty string if no history.
+
+    `trailing_note`, if provided, is appended as a single line under the
+    journal block -- used by callers to flag "these predate a relationship
+    shift, treat the warmth as obsolete" without bloating the system prompt.
     """
     entries = get_sim_history(sim_name, n, recipient_name=recipient_name)
     if not entries:
@@ -176,6 +180,9 @@ def format_sim_history_for_prompt(sim_name, n=6, recipient_name=None):
             preview += "..."
 
         lines.append(f"  [{date_str}] {label}: {preview}")
+
+    if trailing_note:
+        lines.append(trailing_note)
 
     return "\n".join(lines)
 

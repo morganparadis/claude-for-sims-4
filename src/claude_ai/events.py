@@ -149,8 +149,23 @@ def _resolve_holiday_name(event):
         return ""
 
 
+# Names that come from class-name fallback and aren't meaningful enough
+# to put in the prompt -- if the resolution path ends here we'd rather
+# skip the event than surface a generic, possibly confusing label.
+_GENERIC_FALLBACK_NAMES = {
+    "custom holiday",
+    "holiday",
+    "event",
+    "drama node",
+    "player planned",
+    "npc invite",
+}
+
+
 def _resolve_event_name(event):
-    """Best-effort plain-string name for a calendar event."""
+    """Best-effort plain-string name for a calendar event.
+    Returns "" when only a generic class-name fallback is available --
+    callers drop those events rather than surface a useless label."""
     # Holiday-specific path -- query the holiday service for the player-
     # facing name (custom holidays carry the player's chosen label here,
     # which never makes it into ui_display_data.name as a clean string).
@@ -172,17 +187,17 @@ def _resolve_event_name(event):
     except Exception:
         pass
     cleaned = _clean_event_name(raw or "")
-    if cleaned:
+    if cleaned and cleaned.lower() not in _GENERIC_FALLBACK_NAMES:
         return cleaned
-    # Fallback: class name
+    # Fallback: class name -- only return it if it's not generic.
     try:
         cls_name = type(event).__name__
         cleaned = _clean_event_name(cls_name)
-        if cleaned:
+        if cleaned and cleaned.lower() not in _GENERIC_FALLBACK_NAMES:
             return cleaned
     except Exception:
         pass
-    return "Event"
+    return ""
 
 
 # Tone hints for in-game events where the wrong register would be jarring
@@ -359,6 +374,14 @@ def get_shared_upcoming_events(recipient_sim_info, contact_sim_info, max_events=
                     continue
 
             name = _resolve_event_name(event)
+            if not name:
+                # No meaningful label -- usually an unconfigured holiday
+                # template (HashedTunedInstanceMetaclass data with no
+                # player-set _name). Drop rather than surface "Custom
+                # Holiday" or similar generic placeholders.
+                counts.setdefault("unnamed", 0)
+                counts["unnamed"] += 1
+                continue
             when = _format_time_until(start, now) or "soon"
             counts["kept"] += 1
             kept_lines.append(f"    KEPT: '{name}' ({when}, holiday={is_holiday})")
@@ -376,6 +399,7 @@ def get_shared_upcoming_events(recipient_sim_info, contact_sim_info, max_events=
         f"Lookup r={recipient_id} c={contact_id}: "
         f"scanned={counts['scanned']}, past={counts['past']}, "
         f"attendee_mismatch={counts['attendee_mismatch']}, "
+        f"unnamed={counts.get('unnamed', 0)}, "
         f"kept={counts['kept']}, errors={counts['errors']}"
     )
     for line in kept_lines:

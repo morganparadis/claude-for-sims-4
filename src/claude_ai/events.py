@@ -94,20 +94,53 @@ def _resolve_event_name(event):
     return "Event"
 
 
-# Tone hints for events where the wrong register would be jarring (funeral
-# texted casually, wedding texted flatly). Keyed by case-insensitive
-# substring of the resolved event name. Appended verbatim to the event
-# line so the model sees it right next to the event description.
+# Tone hints for in-game events where the wrong register would be jarring
+# (funeral texted casually, wedding texted flatly). Keyed by case-insensitive
+# substring of the resolved event name; first match wins. Only events that
+# actually exist in The Sims 4 are listed.
+#
+# Planned events (sim-host events on the calendar):
+#   Funeral (Life & Death) -- solemn
+#   Wedding / Wedding Ceremony / Wedding Reception (My Wedding Stories) -- celebratory
+#   Bachelor / Bachelorette Party (My Wedding Stories) -- celebratory
+#   Birthday Party (base) -- celebratory
+#   Anniversary Party (base) -- warm celebratory
+#   Baby Shower (Growing Together) -- warm celebratory
+#   Graduation (Discover University / High School Years) -- celebratory
+#   House Warming (For Rent) -- warm casual
+#   Family Dinner / Family Brunch (Growing Together) -- warm, family-focused
+#   Sleepover (For Rent / Growing Together) -- casual, fun
+#
+# Holidays (Seasons pack + custom):
+#   Love Day -- romantic
+#   Winterfest -- warm, family, gift-giving
+#   Harvestfest -- cozy, family, food
+#   New Year's Day -- hopeful, looking-forward
+#   Spooky Day -- playful, spooky-fun
+#   Father's Day / Mother's Day -- sentimental, family
 _EVENT_TONE_HINTS = {
-    "funeral":      "(solemn tone -- this is a grieving occasion, not a casual hangout)",
-    "wedding":      "(warm, celebratory tone)",
-    "birthday":     "(celebratory tone)",
-    "graduation":   "(celebratory tone)",
-    "anniversary":  "(warm, celebratory tone)",
-    "baby shower":  "(warm, celebratory tone)",
-    "housewarming": "(warm, casual celebratory tone)",
-    "dinner party": "(social, casual tone)",
-    "game night":   "(casual, fun tone)",
+    # Planned events
+    "funeral":           "(solemn tone -- grieving occasion, not a casual hangout)",
+    "wedding":           "(warm, celebratory tone)",
+    "bachelor":          "(rowdy, celebratory tone)",
+    "bachelorette":      "(rowdy, celebratory tone)",
+    "birthday":          "(celebratory tone)",
+    "anniversary":       "(warm, celebratory tone)",
+    "baby shower":       "(warm, celebratory tone)",
+    "graduation":        "(celebratory, proud tone)",
+    "house warming":     "(warm, casual celebratory tone)",
+    "housewarming":      "(warm, casual celebratory tone)",
+    "family dinner":     "(warm, family tone)",
+    "family brunch":     "(warm, family tone)",
+    "sleepover":         "(casual, fun tone)",
+    # Holidays
+    "love day":          "(romantic tone -- it's Love Day)",
+    "winterfest":        "(warm, family-and-gifts tone -- it's Winterfest)",
+    "harvestfest":       "(cozy, family-and-food tone -- it's Harvestfest)",
+    "new year":          "(hopeful, looking-forward tone -- it's New Year's)",
+    "spooky day":        "(playful, spooky-fun tone -- it's Spooky Day)",
+    "father's day":      "(sentimental, family tone)",
+    "mother's day":      "(sentimental, family tone)",
 }
 
 
@@ -199,17 +232,36 @@ def get_shared_upcoming_events(recipient_sim_info, contact_sim_info, max_events=
             except Exception:
                 pass
 
+            # Holidays are world-level and have no invitee list -- both
+            # sims experience them by default. Detect by class name so
+            # we don't have to import HolidayDramaNode (which may not
+            # be available pre-Seasons).
+            is_holiday = False
             try:
-                sims = event.get_calendar_sims() or ()
-                attendee_ids = {_sim_id(si) for si in sims if si is not None}
+                for base in type(event).__mro__:
+                    if "Holiday" in getattr(base, "__name__", ""):
+                        is_holiday = True
+                        break
             except Exception:
-                continue
-            if recipient_id not in attendee_ids or contact_id not in attendee_ids:
-                continue
+                pass
+
+            if not is_holiday:
+                try:
+                    sims = event.get_calendar_sims() or ()
+                    attendee_ids = {_sim_id(si) for si in sims if si is not None}
+                except Exception:
+                    continue
+                if recipient_id not in attendee_ids or contact_id not in attendee_ids:
+                    continue
 
             name = _resolve_event_name(event)
             when = _format_time_until(start, now) or "soon"
-            results.append({"name": name, "when": when, "start": start})
+            results.append({
+                "name": name,
+                "when": when,
+                "start": start,
+                "is_holiday": is_holiday,
+            })
     except Exception:
         return results
 
@@ -230,12 +282,13 @@ def format_shared_events_for_prompt(recipient_sim_info, contact_sim_info):
     if not events:
         return ""
     lines = [
-        "Upcoming events you are BOTH attending (feel free to reference these "
-        "naturally; do not invent events not listed here -- and match the tone "
-        "hint when one is given):"
+        "Upcoming on the calendar (feel free to reference these naturally; do "
+        "not invent events not listed here -- and match the tone hint when "
+        "one is given):"
     ]
     for ev in events:
         hint = _tone_hint(ev["name"])
         hint_part = f" {hint}" if hint else ""
-        lines.append(f"  - {ev['name']} ({ev['when']}){hint_part}")
+        kind = "holiday" if ev.get("is_holiday") else "event you are both attending"
+        lines.append(f"  - {ev['name']} ({kind}, {ev['when']}){hint_part}")
     return "\n".join(lines)

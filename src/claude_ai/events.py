@@ -14,7 +14,21 @@ We use that to find events that BOTH the contact and the recipient are
 invited to, so phone prompts can include lines like "I'll see you at the
 funeral later." We never invent events that aren't actually on the calendar.
 """
+import os
+import datetime
+
 from . import sim_context
+
+
+def _log(msg):
+    """Best-effort log line into Documents/ClaudeAI_Log.txt with an [events] tag."""
+    try:
+        path = os.path.join(os.path.expanduser("~"), "Documents", "ClaudeAI_Log.txt")
+        ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(f"[{ts}] [events] {msg}\n")
+    except Exception:
+        pass
 
 
 def _get_calendar_service():
@@ -49,28 +63,63 @@ def _sim_id(sim_info):
 def _clean_event_name(raw):
     """Strip Sims-internal class-name noise from an event label.
 
-    Tuned drama-node subclasses look like 'playerPlannedDramaNode Funeral'
-    or 'PlayerPlannedDramaNode_Wedding'. We want just the event-type
-    suffix ('Funeral', 'Wedding'). When the whole name IS the drama-node
-    wrapper, we strip 'DramaNode' and titlecase what's left."""
+    Tuned drama-node subclasses can present as 'playerPlannedDramaNode
+    Funeral', 'PlayerPlannedDramaNode_Wedding', or even nested forms
+    like 'PlayerPlannedDramaNode_Premadeholiday_Surprise_Pirateday'.
+    We want the event-type suffix with underscores turned into spaces
+    and consistent title-case. When the whole name IS the drama-node
+    wrapper, we strip 'DramaNode' and clean what's left."""
     import re
     if not raw:
         return ""
     # If a "...DramaNode" segment appears followed by the real event
     # type, take everything after it. Handles snake/camel/space joiners.
     m = re.search(r'[Dd]rama\s*[Nn]ode[\s_]+(.+)$', raw)
-    if m:
-        return m.group(1).strip().title()
-    # Otherwise strip a trailing "DramaNode" / "Drama Node" if present
-    stripped = re.sub(r'[\s_]*[Dd]rama\s*[Nn]ode$', '', raw)
+    candidate = m.group(1) if m else re.sub(r'[\s_]*[Dd]rama\s*[Nn]ode$', '', raw)
     # camelCase -> "camel Case"
-    stripped = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', stripped)
-    stripped = stripped.replace('_', ' ').strip()
-    return stripped.title() if stripped else ""
+    candidate = re.sub(r'(?<=[a-z])(?=[A-Z])', ' ', candidate)
+    candidate = candidate.replace('_', ' ').strip()
+    # Strip any leading "Premadeholiday" / "Customholiday" wrapper that
+    # gets baked into tuned-holiday class names ("premadeholiday Surprise
+    # Pirateday" -> "Surprise Pirateday") -- the wrapper word is internal.
+    candidate = re.sub(r'^(?:Premade|Custom)?holiday\s+', '', candidate, flags=re.IGNORECASE).strip()
+    return candidate.title() if candidate else ""
+
+
+def _resolve_holiday_name(event):
+    """For a HolidayDramaNode, prefer the holiday_service display name
+    (the player's chosen name for custom holidays, or the localized
+    label for built-in ones). Returns "" if anything fails."""
+    try:
+        import services
+        hs = services.holiday_service()
+        if hs is None:
+            return ""
+        hid = getattr(event, "holiday_id", None)
+        if hid is None:
+            return ""
+        loc = hs.get_holiday_display_name(hid)
+        if loc is None:
+            return ""
+        resolved = sim_context._resolve_localized_string(loc)
+        return _clean_event_name(resolved or "")
+    except Exception:
+        return ""
 
 
 def _resolve_event_name(event):
     """Best-effort plain-string name for a calendar event."""
+    # Holiday-specific path -- query the holiday service for the player-
+    # facing name (custom holidays carry the player's chosen label here,
+    # which never makes it into ui_display_data.name as a clean string).
+    try:
+        if any("Holiday" in getattr(b, "__name__", "") for b in type(event).__mro__):
+            hname = _resolve_holiday_name(event)
+            if hname:
+                return hname
+    except Exception:
+        pass
+
     raw = None
     try:
         ud = getattr(event, "ui_display_data", None)
@@ -208,7 +257,13 @@ def get_shared_upcoming_events(recipient_sim_info, contact_sim_info, max_events=
 
     data_map = getattr(cal, "_event_data_map", None)
     if not data_map:
+        _log(f"Lookup r={recipient_id} c={contact_id}: empty _event_data_map.")
         return []
+
+    _log(
+        f"Lookup r={recipient_id} c={contact_id}: scanning "
+        f"{len(data_map)} calendar entries."
+    )
 
     results = []
     try:
@@ -218,19 +273,17 @@ def get_shared_upcoming_events(recipient_sim_info, contact_sim_info, max_events=
             except Exception:
                 continue
             if event is None:
+                _log("  - entry: weakref dead, skipped")
                 continue
+            cls_name = type(event).__name__
             try:
                 start = event.get_calendar_start_time()
-            except Exception:
+            except Exception as e:
+                _log(f"  - {cls_name}: get_calendar_start_time failed: {e}")
                 continue
             if start is None:
+                _log(f"  - {cls_name}: start=None, skipped")
                 continue
-            # Past events are irrelevant
-            try:
-                if start < now:
-                    continue
-            except Exception:
-                pass
 
             # Holidays are world-level and have no invitee list -- both
             # sims experience them by default. Detect by class name so
@@ -245,24 +298,59 @@ def get_shared_upcoming_events(recipient_sim_info, contact_sim_info, max_events=
             except Exception:
                 pass
 
-            if not is_holiday:
-                try:
-                    sims = event.get_calendar_sims() or ()
-                    attendee_ids = {_sim_id(si) for si in sims if si is not None}
-                except Exception:
+            # Diagnostic dump for this entry
+            try:
+                start_ticks = start.absolute_ticks() if hasattr(start, "absolute_ticks") else "?"
+                now_ticks = now.absolute_ticks() if hasattr(now, "absolute_ticks") else "?"
+                delta = start - now
+                delta_min = (
+                    int(delta.in_minutes()) if hasattr(delta, "in_minutes")
+                    else int(delta.in_hours() * 60) if hasattr(delta, "in_hours")
+                    else "?"
+                )
+            except Exception:
+                start_ticks = now_ticks = delta_min = "?"
+
+            try:
+                sims = event.get_calendar_sims() or ()
+                attendee_ids = [_sim_id(si) for si in sims if si is not None]
+            except Exception as e:
+                _log(f"  - {cls_name}: get_calendar_sims failed: {e}")
+                attendee_ids = []
+
+            _log(
+                f"  - {cls_name}: holiday={is_holiday}, start={start_ticks}, "
+                f"now={now_ticks}, delta_min={delta_min}, "
+                f"attendees={attendee_ids}, want=[{recipient_id},{contact_id}]"
+            )
+
+            # Past events are irrelevant -- once the event has started,
+            # both sims should be at the lot together and would not be
+            # texting each other across it.
+            try:
+                if start < now:
+                    _log("    -> dropped (past/in-progress)")
                     continue
-                if recipient_id not in attendee_ids or contact_id not in attendee_ids:
+            except Exception:
+                pass
+
+            if not is_holiday:
+                attendee_set = set(attendee_ids)
+                if recipient_id not in attendee_set or contact_id not in attendee_set:
+                    _log("    -> dropped (one or both sims not in attendee list)")
                     continue
 
             name = _resolve_event_name(event)
             when = _format_time_until(start, now) or "soon"
+            _log(f"    -> KEPT as '{name}' ({when})")
             results.append({
                 "name": name,
                 "when": when,
                 "start": start,
                 "is_holiday": is_holiday,
             })
-    except Exception:
+    except Exception as e:
+        _log(f"Iter error: {type(e).__name__}: {e}")
         return results
 
     # Sort by soonest first and cap

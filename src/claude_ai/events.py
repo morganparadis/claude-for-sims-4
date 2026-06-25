@@ -100,8 +100,6 @@ def _resolve_event_name(event):
 # line so the model sees it right next to the event description.
 _EVENT_TONE_HINTS = {
     "funeral":      "(solemn tone -- this is a grieving occasion, not a casual hangout)",
-    "memorial":     "(solemn tone -- this is a grieving occasion)",
-    "wake":         "(solemn tone -- this is a grieving occasion)",
     "wedding":      "(warm, celebratory tone)",
     "birthday":     "(celebratory tone)",
     "graduation":   "(celebratory tone)",

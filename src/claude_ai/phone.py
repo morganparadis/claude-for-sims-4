@@ -9,7 +9,7 @@ Players can reply with claude.reply <message> to continue the conversation.
 import random
 import threading
 
-from . import api_client, sim_context, config, journal, notifications, moodlets
+from . import api_client, sim_context, config, journal, notifications, moodlets, events
 
 # Conversations keyed by recipient sim_id, so concurrent texts/calls to different
 # household sims don't overwrite each other.
@@ -2211,9 +2211,12 @@ use a generic reference like 'a coworker', 'my neighbor', 'this friend of mine' 
 
     recipient_block = _describe_recipient(recipient, contact=contact)
 
+    events_text = events.format_shared_events_for_prompt(recipient, contact.get("sim_info"))
+    events_block = f"\n\n{events_text}" if events_text else ""
+
     prompt = (
         f"Caller info:\n{rel_desc}{history_block}{mutual_block}\n\n"
-        f"{recipient_block}\n\n"
+        f"{recipient_block}{events_block}\n\n"
         f"They are calling {recipient_name}{_location_context(recipient, contact)}.{_season_context()}\n\n"
         f"Write what {contact['name']} says during this phone call."
     )
@@ -2287,9 +2290,12 @@ use a generic reference like 'a coworker', 'my neighbor', 'this friend of mine' 
 
     recipient_block = _describe_recipient(recipient, contact=contact)
 
+    events_text = events.format_shared_events_for_prompt(recipient, contact.get("sim_info"))
+    events_block = f"\n\n{events_text}" if events_text else ""
+
     prompt = (
         f"Sender info:\n{rel_desc}{history_block}{mutual_block}\n\n"
-        f"{recipient_block}\n\n"
+        f"{recipient_block}{events_block}\n\n"
         f"They are texting {recipient_name}{_location_context(recipient, contact)}.{_season_context()}\n\n"
         f"Write 1-2 short text messages from {contact['name']}."
     )
@@ -2371,9 +2377,11 @@ def generate_reply(player_message, callback=None, output=None):
         mutual_block = "\n\nPeople BOTH of you know (the ONLY mutual sims you can name):\n" + "\n".join(f"  - {m}" for m in mutuals)
         mutual_block += "\nDO NOT invent other sim names — use generic references like 'a coworker' if needed."
 
+    events_text = events.format_shared_events_for_prompt(recipient, contact.get("sim_info"))
+    events_block = f"\n\n{events_text}" if events_text else ""
 
     prompt = (
-        f"Relationship info:\n{rel_desc}{history_block}{mutual_block}\n\n"
+        f"Relationship info:\n{rel_desc}{history_block}{mutual_block}{events_block}\n\n"
         f"Conversation so far:\n{convo_text}\n\n"
         f"Write {other_name}'s reply (1-3 short text messages)."
     )
@@ -2463,9 +2471,11 @@ def send_text(contact, player_message, callback=None, output=None):
         mutual_block = "\n\nPeople BOTH of you know (the ONLY mutual sims you can name):\n" + "\n".join(f"  - {m}" for m in mutuals)
         mutual_block += "\nDO NOT invent other sim names — use generic references like 'a coworker' if needed."
 
+    events_text = events.format_shared_events_for_prompt(main_si, contact.get("sim_info"))
+    events_block = f"\n\n{events_text}" if events_text else ""
 
     prompt = (
-        f"Relationship info:\n{rel_desc}{history_block}{mutual_block}\n\n"
+        f"Relationship info:\n{rel_desc}{history_block}{mutual_block}{events_block}\n\n"
         f"{main_name} just texted {other_name}: \"{player_message}\"\n\n"
         f"Write {other_name}'s reply (1-3 short text messages). "
         f"If {main_name} mentions people or events you don't have details about, "
@@ -2550,9 +2560,11 @@ def send_call(contact, player_topic, callback=None, output=None):
         mutual_block = "\n\nPeople BOTH of you know (the ONLY mutual sims you can name):\n" + "\n".join(f"  - {m}" for m in mutuals)
         mutual_block += "\nDO NOT invent other sim names — use generic references like 'a coworker' if needed."
 
+    events_text = events.format_shared_events_for_prompt(main_si, contact.get("sim_info"))
+    events_block = f"\n\n{events_text}" if events_text else ""
 
     prompt = (
-        f"Person being called:\n{rel_desc}{history_block}{mutual_block}\n\n"
+        f"Person being called:\n{rel_desc}{history_block}{mutual_block}{events_block}\n\n"
         f"{main_name} is calling {other_name}. {main_name} says: \"{player_topic}\"\n\n"
         f"Write what {other_name} says in response (3-5 lines of dialogue). "
         f"They should react naturally to what {main_name} said."

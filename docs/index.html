@@ -513,6 +513,18 @@
     <li class="changelog-entry">
       <div class="changelog-date">June 26, 2026</div>
       <div class="changelog-body">
+        <h3>Stops guessing whose funeral it is (v1.2.2)</h3>
+        <ul>
+          <li>Calendar events on the prompt now include the actual focal sims pulled straight from the in-game event data: <code>Funeral — in memory of Sawyer Woodruff</code>, <code>Wedding — for Alex and Bailey</code>, <code>Birthday Party — for Apollo's birthday; hosted by Vivian</code>. The AI no longer infers who an event is about by scanning your family tree for a deceased sim — it reads it off the calendar entry the player actually configured.</li>
+          <li>Hosts are surfaced for any player-planned event (parties, gatherings, dates, holidays you're hosting). Deduped against role-specific entries so the same sim doesn't get listed twice when a wedding host is also one of the betrothed.</li>
+          <li>All three phone system prompts (call, text, reply) now treat calendar events as ground truth — an explicit exception to the "play along with the player" rule. If the events block doesn't name an honoree, the AI is told to stay vague ("the funeral later") rather than guessing from other context.</li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="changelog-entry">
+      <div class="changelog-date">June 26, 2026</div>
+      <div class="changelog-body">
         <h3>Knows that a Sims week is a season (v1.2.1)</h3>
         <ul>
           <li>Sims 4 time runs faster than real life: 1 in-game week = 1 season by default. The mod was telling Claude "Christmas Vacation in 2 weeks" — which reads like a casual fortnight away in human terms but is actually 2 seasons away in sim terms.</li>

@@ -60,6 +60,147 @@ def _sim_id(sim_info):
             return None
 
 
+# Map of situation-class attribute -> human-readable role label. The
+# situation class declares each role as a SITUATION_JOB tunable; player-
+# planned events (funerals, weddings) populate those jobs with specific
+# sims when the player schedules the event. By checking these specific
+# job slots we can tell the prompt who an event is FOR -- whose funeral
+# it is, who the couple at the wedding are -- without guessing.
+#
+# Pack-locked situations (Funeral needs Life & Death, Wedding needs My
+# Wedding Stories) won't even exist on installs without those packs, so
+# the attribute access just falls through to None and we move on.
+_HONORED_JOB_ATTRS = (
+    ("departed_job",   "deceased"),     # CustomStateFuneralSituation
+    ("betrothed",      "betrothed"),    # WeddingSituation
+    ("celebrant",      "celebrant"),    # BirthdayPartySituation (the birthday sim;
+                                        # host may be different -- e.g. parent
+                                        # hosting kid's party -- so we report both
+                                        # separately)
+    ("guest_of_honor", "guest_of_honor"),  # LampoonPartySituation, and any other
+                                        # "honored guest" event types that follow
+                                        # the same convention. No BabyShower
+                                        # situation exists in base game -- those
+                                        # surface only as the calendar name +
+                                        # host.
+)
+
+
+def _get_honored_sims(event, event_name_for_log=""):
+    """For events with focal sims (funeral honoree, wedding couple, party
+    host), return a list of {'name': str, 'role': str} dicts. For events
+    that don't have any focal role -- holidays, world-level events --
+    return []. We use this so the prompt can state who the event is for
+    or who's running it when we know it, and stay silent (instructing
+    the model not to guess) when we don't.
+
+    Focal sims are sourced from the drama node's _situation_seed:
+      - honored jobs (Funeral.departed_job, Wedding.betrothed) -> the
+        sims the player explicitly picked when scheduling the event
+      - guest_list.host_sim_info -> the sim who planned the event
+
+    The host slot is also data-backed (we never guess); we just emit it
+    on top of any role-specific honorees, deduped so the same sim isn't
+    surfaced under two roles.
+    """
+    out = []
+    # Diagnostic flag: only log when the event name suggests we SHOULD
+    # have honored data, to avoid noisy log entries for holidays etc.
+    log_misses = any(w in event_name_for_log.lower() for w in ("funeral", "wedding", "memorial"))
+    try:
+        seed = getattr(event, "_situation_seed", None)
+        # situation_type lives on the seed, not the drama node itself
+        # (PlayerPlannedDramaNode delegates to its seed for situation
+        # info). Fall back to event.situation_type if some other drama
+        # node type exposes it directly.
+        situation_type = None
+        if seed is not None:
+            situation_type = getattr(seed, "situation_type", None)
+        if situation_type is None:
+            situation_type = getattr(event, "situation_type", None)
+        if seed is None or situation_type is None:
+            if log_misses:
+                _log(f"honored[{event_name_for_log}]: no seed/situation_type "
+                     f"(seed={seed is not None}, st={situation_type is not None}, "
+                     f"event_cls={type(event).__name__})")
+            return out
+        guest_list = getattr(seed, "guest_list", None)
+        if guest_list is None:
+            if log_misses:
+                _log(f"honored[{event_name_for_log}]: no guest_list on seed "
+                     f"(seed_attrs={[a for a in dir(seed) if not a.startswith('_')][:15]})")
+            return out
+        # Probe which honored-job attributes exist on this situation type
+        if log_misses:
+            avail = []
+            for attr_name, _ in _HONORED_JOB_ATTRS:
+                if getattr(situation_type, attr_name, None) is not None:
+                    avail.append(attr_name)
+            st_name = getattr(situation_type, "__name__", "?")
+            all_jobs = [a for a in dir(situation_type) if "job" in a.lower() or "betrothed" in a.lower() or "departed" in a.lower()]
+            _log(f"honored[{event_name_for_log}]: st={st_name} "
+                 f"matching_honored_attrs={avail} job_like_attrs={all_jobs[:10]}")
+        for attr_name, role in _HONORED_JOB_ATTRS:
+            job = getattr(situation_type, attr_name, None)
+            if job is None:
+                continue
+            try:
+                infos = guest_list.get_guest_infos_for_job(job) or ()
+            except Exception as e:
+                if log_misses:
+                    _log(f"honored[{event_name_for_log}]: get_guest_infos_for_job({attr_name}) "
+                         f"failed: {type(e).__name__}: {e}")
+                infos = ()
+            if log_misses:
+                _log(f"honored[{event_name_for_log}]: {attr_name} -> {len(list(infos) if infos else [])} infos")
+                infos = guest_list.get_guest_infos_for_job(job) or ()  # re-fetch since we consumed it
+            for info in infos:
+                si = None
+                # SituationGuestInfo exposes either a sim_info handle or
+                # a bare sim_id; pre-resolve the id through the sim
+                # manager so we always end up with a SimInfo to read
+                # first/last name off.
+                try:
+                    si = getattr(info, "sim_info", None)
+                    if si is None:
+                        sid = getattr(info, "sim_id", None)
+                        if sid:
+                            import services
+                            sm = services.sim_info_manager()
+                            si = sm.get(sid) if sm is not None else None
+                except Exception:
+                    si = None
+                if si is None:
+                    if log_misses:
+                        _log(f"honored[{event_name_for_log}]: info {info!r} -> no sim_info")
+                    continue
+                try:
+                    name = f"{si.first_name} {si.last_name}".strip()
+                except Exception:
+                    name = None
+                if name:
+                    out.append({"name": name, "role": role})
+
+        # Host of the event -- the sim who scheduled it. Useful context
+        # for parties/gatherings/dates where there's no specific honoree
+        # job but there IS a host. Dedupe against role-specific entries
+        # so we don't list the same sim as both deceased and host.
+        try:
+            host_si = getattr(guest_list, "host_sim_info", None)
+            if host_si is not None:
+                host_name = f"{host_si.first_name} {host_si.last_name}".strip()
+                already_listed = any(h["name"] == host_name for h in out)
+                if host_name and not already_listed:
+                    out.append({"name": host_name, "role": "host"})
+        except Exception as e:
+            if log_misses:
+                _log(f"honored[{event_name_for_log}]: host lookup failed: "
+                     f"{type(e).__name__}: {e}")
+    except Exception as e:
+        _log(f"_get_honored_sims: {type(e).__name__}: {e}")
+    return out
+
+
 def _clean_event_name(raw):
     """Strip Sims-internal class-name noise from an event label.
 
@@ -425,14 +566,21 @@ def get_shared_upcoming_events(recipient_sim_info, contact_sim_info, max_events=
                 continue
             when = _format_time_until(start, now) or "soon"
             season = _season_for_time(start)
+            honored = _get_honored_sims(event, event_name_for_log=name)
             counts["kept"] += 1
-            kept_lines.append(f"    KEPT: '{name}' ({when}, holiday={is_holiday}, season={season})")
+            honored_log = ""
+            if honored:
+                honored_log = " honored=" + ",".join(f"{h['name']}({h['role']})" for h in honored)
+            kept_lines.append(
+                f"    KEPT: '{name}' ({when}, holiday={is_holiday}, season={season}){honored_log}"
+            )
             results.append({
                 "name": name,
                 "when": when,
                 "start": start,
                 "is_holiday": is_holiday,
                 "season": season,
+                "honored": honored,
             })
     except Exception as e:
         _log(f"Iter error: {type(e).__name__}: {e}")
@@ -456,18 +604,74 @@ def get_shared_upcoming_events(recipient_sim_info, contact_sim_info, max_events=
     return results[:max_events]
 
 
+def _format_honored(honored):
+    """Render the honored-sim part of an event line. Returns "" when
+    nothing is known so the caller can omit the segment entirely; we
+    never invent who an event is about.
+    """
+    if not honored:
+        return ""
+    # Group by role so two betrothed sims read naturally as "Alex and
+    # Bailey are getting married", not as two separate entries.
+    by_role = {}
+    for h in honored:
+        by_role.setdefault(h["role"], []).append(h["name"])
+
+    parts = []
+    if "deceased" in by_role:
+        names = by_role["deceased"]
+        if len(names) == 1:
+            parts.append(f"in memory of {names[0]}")
+        else:
+            parts.append("in memory of " + ", ".join(names))
+    if "betrothed" in by_role:
+        names = by_role["betrothed"]
+        if len(names) == 2:
+            parts.append(f"for {names[0]} and {names[1]}")
+        elif names:
+            parts.append("for " + ", ".join(names))
+    if "celebrant" in by_role:
+        names = by_role["celebrant"]
+        if len(names) == 1:
+            parts.append(f"for {names[0]}'s birthday")
+        else:
+            parts.append("for " + " and ".join(names) + "'s birthday")
+    if "guest_of_honor" in by_role:
+        names = by_role["guest_of_honor"]
+        if len(names) == 1:
+            parts.append(f"in honor of {names[0]}")
+        else:
+            parts.append("in honor of " + ", ".join(names))
+    if "host" in by_role:
+        names = by_role["host"]
+        if len(names) == 1:
+            parts.append(f"hosted by {names[0]}")
+        else:
+            parts.append("hosted by " + " and ".join(names))
+    return " — " + "; ".join(parts) if parts else ""
+
+
 def format_shared_events_for_prompt(recipient_sim_info, contact_sim_info):
     """Build a small prompt block listing upcoming events both sims are
     invited to, or "" if there aren't any. The model can use this to
     naturally reference shared upcoming plans ('see you at the funeral
-    later') without inventing events that aren't actually scheduled."""
+    later') without inventing events that aren't actually scheduled.
+
+    Each event line includes who it's FOR only when the calendar
+    actually records that information (e.g. the player picked the
+    deceased sim when planning the funeral). When no honoree is recorded
+    we leave it off entirely and the trailing instruction tells the
+    model not to guess.
+    """
     events = get_shared_upcoming_events(recipient_sim_info, contact_sim_info)
     if not events:
         return ""
     lines = [
-        "Upcoming on the calendar (feel free to reference these naturally; do "
-        "not invent events not listed here -- and match the tone hint when "
-        "one is given):"
+        "Upcoming on the calendar (you may reference these naturally; do "
+        "NOT invent events not listed here, and do NOT invent details "
+        "about an event -- who it's for, who's hosting, what's planned -- "
+        "beyond what is explicitly stated below). Match the tone hint "
+        "when one is given:"
     ]
     for ev in events:
         hint = _tone_hint(ev["name"])
@@ -478,5 +682,8 @@ def format_shared_events_for_prompt(recipient_sim_info, contact_sim_info):
         # one in-game season, so "in 2 weeks" can mean "two seasons from
         # now"; the season label keeps the model's framing accurate.
         season_part = f", {season}" if season else ""
-        lines.append(f"  - {ev['name']} ({kind}, {ev['when']}{season_part}){hint_part}")
+        honored_part = _format_honored(ev.get("honored"))
+        lines.append(
+            f"  - {ev['name']} ({kind}, {ev['when']}{season_part}){honored_part}{hint_part}"
+        )
     return "\n".join(lines)

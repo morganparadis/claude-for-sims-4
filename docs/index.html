@@ -191,13 +191,13 @@
       </figure>
 
       <figure class="screenshot">
-        <img src="img/grandpaexample.jpg" alt="Text message from a grandparent in warm, doting tone">
-        <figcaption><strong>From a grandparent</strong><br><span class="muted small">Doting, warm, full sentences.</span></figcaption>
+        <img src="img/contextexample.PNG" alt="Call referencing a real in-game event the player's sim just did">
+        <figcaption><strong>Knows what just happened</strong><br><span class="muted small">References real life events — quit jobs, promotions, breakups.</span></figcaption>
       </figure>
 
       <figure class="screenshot">
-        <img src="img/contextexample.PNG" alt="Call referencing a real in-game event the player's sim just did">
-        <figcaption><strong>Knows what just happened</strong><br><span class="muted small">References real in-game events — quit jobs, promotions, breakups.</span></figcaption>
+        <img src="img/funeralexample.PNG" alt="Call referencing an upcoming funeral both sims are attending">
+        <figcaption><strong>Knows what's coming up</strong><br><span class="muted small">References upcoming funerals, weddings, holidays — naturally, never invented.</span></figcaption>
       </figure>
 
       <figure class="screenshot">
@@ -511,6 +511,18 @@
   <ol class="changelog-list">
 
     <li class="changelog-entry">
+      <div class="changelog-date">June 25, 2026</div>
+      <div class="changelog-body">
+        <h3>Aware of your calendar and family tree (v1.2)</h3>
+        <ul>
+          <li><strong>Upcoming events in the prompt</strong> — calls and texts now reference real upcoming entries on your sim's calendar that BOTH sims are attending. Funeral in 40 minutes, wedding in 3 days, your custom "Summer" holiday next week. The AI references them naturally ("see you at the funeral later") instead of inventing meetups. Solemn events get a solemn tone hint; weddings and birthdays get a warm one.</li>
+          <li><strong>Family-role references</strong> — when one family member mentions another in a message to you, they use the relationship ("your dad", "your sister") instead of the first name. Vivian texting Francesca about Apollo now says "your dad wants to know if you're free Friday" instead of "apollo wants to know...".</li>
+          <li><strong>Life events surface once per contact</strong> — when something big happens in your save (job quit, promotion, breakup), each contact only brings it up once. Same sim won't keep asking how it's been leaving your job across five calls.</li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="changelog-entry">
       <div class="changelog-date">June 24, 2026</div>
       <div class="changelog-body">
         <h3>Enemies actually act like enemies (v1.1.1)</h3>
@@ -541,17 +553,6 @@
         <ul>
           <li>When something big happens to a sim in your game — they quit a job, get promoted, have a baby, get married, age up — the mod picks it up automatically and references it in calls and texts. Your friend won't congratulate you on a promotion that hasn't happened, but they will if it did yesterday.</li>
           <li>Tracks 7 days of recent events per sim, max 4 surfaced per prompt.</li>
-        </ul>
-      </div>
-    </li>
-
-    <li class="changelog-entry">
-      <div class="changelog-date">June 22, 2026</div>
-      <div class="changelog-body">
-        <h3>Realistic reply delays</h3>
-        <ul>
-          <li>Sims now "think" before texting back instead of replying instantly. Delay scales by friendship (best friends fast, enemies slow) and traits (Lazy/Loner slow, Active/Outgoing fast). Defaults to 15–90 seconds.</li>
-          <li>Configurable in <code>claude_config.cfg</code> — set <code>reply_delay_enabled = false</code> for the old instant behavior.</li>
         </ul>
       </div>
     </li>

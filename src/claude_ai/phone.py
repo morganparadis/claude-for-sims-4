@@ -1206,6 +1206,17 @@ def _describe_recipient(recipient_sim, contact=None):
     if traits:
         parts.append(f"{recipient_sim.first_name}'s traits: {', '.join(traits)}")
 
+    # Recipient's world -- the sender already gets this, and skipping it on
+    # the recipient leaves the model guessing whether they live in the same
+    # place or somewhere else, which produces phrases like "ran into your
+    # mom at the store" when the recipient lives in a different world.
+    try:
+        home = _get_sim_home_world(recipient_sim)
+        if home:
+            parts.append(f"{recipient_sim.first_name} lives in: {home}")
+    except Exception:
+        pass
+
     clubs = sim_context.get_sim_clubs(recipient_sim)
     if clubs:
         parts.append(f"{recipient_sim.first_name}'s clubs: {', '.join(clubs)}")

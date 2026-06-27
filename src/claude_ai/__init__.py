@@ -15,7 +15,7 @@ Commands (open cheat console with Ctrl+Shift+C):
 """
 
 MOD_NAME = "Claude AI for The Sims 4"
-MOD_VERSION = "1.2.2"
+MOD_VERSION = "2.0.0"
 
 
 def _log(message):
@@ -90,6 +90,17 @@ try:
     from . import auto_events
 
     auto_events.start()  # starts only if auto_events_enabled = true in config
+
+    # Wire up phone-UI injection BEFORE object tunings finish loading.
+    # The companion .package supplies the interaction tunings (which are
+    # PieMenuCategory + SuperInteraction in the game's internal type system,
+    # but they target the phone wheel UI); this hook appends them to the
+    # sim's affordance list at load complete.
+    try:
+        from . import phone_ui_injection
+        phone_ui_injection.register()
+    except Exception as _e:
+        _log(f"phone_ui_injection.register failed: {type(_e).__name__}: {_e}")
 
     _log("All modules imported, commands registered.")
 

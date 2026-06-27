@@ -6,12 +6,17 @@ Brings AI-generated dialogue, storylines, random events, phone calls, and challe
 
 ## Installation
 
-1. You'll need [Python 3.7](https://www.python.org/ftp/python/3.7.9/python-3.7.9-embed-amd64.zip) for compilation. Extract it to `tools/python37/` in this project folder.
-2. Run `python build.py` — it compiles the mod to `.pyc` and copies it to your Mods folder automatically.
-3. Open `claude_config.cfg` in your Mods folder and replace `YOUR_API_KEY_HERE` with your API key.
+1. **Download the latest release** from [Releases](https://github.com/morganparadis/claude-for-sims-4/releases) — grab `ClaudeAI.ts4script`, `ClaudeAI.package`, and `claude_config.cfg`.
+2. **Drop all three into your Mods folder:**
+   - **Windows:** `Documents\Electronic Arts\The Sims 4\Mods\`
+   - **macOS:** `~/Documents/Electronic Arts/The Sims 4/Mods/`
+   - **Linux (Steam Proton):** `~/.steam/steam/steamapps/compatdata/<sims-4-app-id>/pfx/drive_c/users/steamuser/Documents/Electronic Arts/The Sims 4/Mods/`
+3. **Open `claude_config.cfg`** in any text editor and replace `YOUR_API_KEY_HERE` with your Anthropic API key.
    - Get a key at [console.anthropic.com](https://console.anthropic.com/) (free to sign up, pay per use)
-4. In The Sims 4: **Game Options > Other > enable Custom Content and Script Mods**, then restart.
-5. You'll see a notification popup when the mod loads. Type `claude.status` in the cheat console to see all commands.
+4. **In The Sims 4:** **Game Options > Other > enable Custom Content and Script Mods**, then restart the game.
+5. You'll see a notification popup when the mod loads. Type `claude.status` in the cheat console to confirm setup and see all commands.
+
+No Python install required for end users — the release zips ship the compiled `.pyc` bytecode already.
 
 ---
 
@@ -28,11 +33,20 @@ Every time you run a command, the mod reads live data from the game and sends it
 | Skill levels | Cooking 7, Programming 4, Fitness 2 |
 | Household name, members, funds | The Feng Household, §42,800 |
 | Current lot | Oakenstead |
-| Relationship network | names, relationship types, friendship scores |
+| Current world and season | Oasis Springs, Summer |
+| Relationship network | names, relationship types, friendship scores, family roles |
+| Upcoming calendar events | funerals, weddings, parties, holidays — including who they're for |
+| Recent life events | new jobs, breakups, babies, ageups — surfaced once per contact |
 | Installed packs | used to keep suggestions relevant to what you own |
 | Recent journal history | past events, storylines, and chats from previous sessions |
 
 The journal gives Claude memory across sessions — generated events, stories, and chat responses are saved automatically and included in future prompts so the AI can reference what happened before.
+
+**Calendar awareness** — calls and texts reference real upcoming entries on your sim's calendar that BOTH sims are attending. "See you at the funeral later" / "can't wait for your wedding" instead of inventing meetups. The mod also reads the actual focal sims off each event so the AI knows the funeral is *in memory of Sawyer*, the wedding is *for Alex and Bailey*, the birthday is *for Apollo* — no more guessing whose event it is.
+
+**Sims-time aware** — the prompt explains that one in-game week is one season, so "Christmas Vacation in 2 weeks" gets framed as "two seasons away" rather than a casual fortnight.
+
+**Family-role references** — when one family member mentions another, they use the relationship from the recipient's perspective ("your dad", "your sister") instead of the first name.
 
 ---
 
@@ -73,15 +87,27 @@ Open the cheat console with `Ctrl+Shift+C`, type a command, press Enter.
 | `claude.sendcall Bella Goth I have news` | Call a specific sim about a topic |
 | `claude.reply <message>` | Continue any conversation — they'll respond back |
 
-Calls and texts show as in-game phone dialogs with the sim's portrait. Click **Reply** on the popup to continue the conversation via `claude.reply`. The full conversation history is tracked, so back-and-forth exchanges stay coherent.
+Calls and texts show as in-game phone dialogs with the sim's portrait. **Click Reply on the popup** to type a response directly in a text-input dialog (no need to drop to the cheat console). The full conversation history is tracked, so back-and-forth exchanges stay coherent.
 
 Each sim has a unique voice based on their **age, traits, mood, career, and aspiration**. A Goofball Teen texts completely differently from a Snob Elder. Past interactions with that sim are also included, so they'll reference previous conversations naturally.
 
-**Sims also remember big life events.** When something significant happens in your game — a sim quits their job, gets promoted, has a baby, gets married, ages up — the mod picks it up automatically and references it in calls and texts. Your friend won't congratulate you on a promotion that didn't happen, but they will if it did yesterday.
+**Sims also remember big life events.** When something significant happens in your game — a sim quits their job, gets promoted, has a baby, gets married, ages up — the mod picks it up automatically and references it in calls and texts. Each contact only brings it up once, so the same sim won't keep asking how leaving your job is going across five different calls.
 
-**Realistic reply delays** — when you text a sim, they "think" for a few seconds before responding instead of replying instantly. Close friends reply fast; lazy or hostile sims drag. Set `reply_delay_enabled = false` to restore instant replies.
+**Realistic reply delays** — when you text a sim, they "think" for a few seconds before responding instead of replying instantly. Close friends reply fast; lazy or hostile sims drag. Toggle from the in-game Settings panel, or set `reply_delay_enabled = false` in the config.
 
 **Mood buffs** — when a message is genuinely emotionally significant (big news, a fight, a confession, a flirty escalation), the recipient sim gets a matching "Feeling X" moodlet (Happy / Sad / Angry / Confident / Flirty / Playful / Energized / Focused / Inspired). Routine chats and small talk don't trigger one. There's a 30-minute per-sim cooldown to prevent stacking.
+
+### Phone UI (Phone > Social)
+
+The phone itself has three Claude AI items under the Social tile — no cheat console needed for everyday use:
+
+| Tile | What it does |
+|---|---|
+| **Call Someone** | Opens a sim picker scoped to your contacts → pick a recipient → type a topic → Claude crafts and delivers the call |
+| **Send Text** | Same flow as Call, but for texts |
+| **Settings** | Opens an in-game settings panel with toggles for auto-events, reply delays, ghost contacts, etc. Picking a row flips a bool or opens a numeric input. Changes save instantly to `claude_config.cfg` (preserving your comments) and apply without reloading the save. |
+
+The cheat commands (`claude.call`, `claude.sendtext`, etc.) still work the same way alongside the UI.
 
 ### General
 | Command | What it does |
@@ -89,11 +115,13 @@ Each sim has a unique voice based on their **age, traits, mood, career, and aspi
 | `claude.chat <message>` | Freeform — ask anything about your game |
 | `claude.journal` | View recent journal entries |
 | `claude.journal_sim First Last` | View journal entries for a specific sim |
-| `claude.auto_events on` | Turn on random auto-events for this session |
-| `claude.auto_events off` | Turn them off |
+| `claude.journal_clear` | Clear the journal (no undo) |
+| `claude.auto_events on` / `off` | Toggle random auto-events for this session |
+| `claude.fire_auto <type>` | Fire one auto-event immediately for testing |
 | `claude.status` | Show config, auto-event status, and all commands |
-| `claude.reload` | Reload config file (after editing claude_config.cfg) |
-| `claude.debug` | Show game API debug info (for troubleshooting) |
+| `claude.reload` | Reload config file (after editing claude_config.cfg by hand) |
+| `claude.debug` / `claude.debugsim` | Game API debug info |
+| `claude.dumpphone` / `claude.dumpprompt` | Dump the most recent prompt or phone-affordance state for inspection |
 
 ---
 
@@ -120,7 +148,7 @@ Available auto-event types: `event`, `goals`, `story`, `drama`, `call`, `text`
 
 With the defaults (20 min interval, 40% chance), you get something roughly every 50 real minutes on average.
 
-**Or toggle mid-session** without editing the config:
+**Or toggle mid-session** via the in-game Settings panel (Phone > Social > Settings) or via cheats:
 ```
 claude.auto_events on
 claude.auto_events off
@@ -128,23 +156,32 @@ claude.auto_events off
 
 ---
 
-## Configuration (`claude_config.cfg`)
+## Configuration
 
-| Setting | Default | Description |
-|---|---|---|
-| `api_key` | *(required)* | Your Anthropic API key |
-| `default_model` | `claude-opus-4-6` | Model for stories and storylines |
-| `fast_model` | `claude-haiku-4-5` | Model for dialogue, events, calls, texts |
-| `max_tokens` | `512` | Max length of responses |
-| `language` | `English` | Language for all generated content |
-| `phone_allow_ghosts` | `true` | Allow ghost sims to call/text. Set `false` to only hear from the living. |
-| `auto_events_enabled` | `false` | Turn on random auto-events |
-| `auto_event_interval_minutes` | `20` | Real-world minutes between checks |
-| `auto_event_chance` | `40` | Percent chance each check fires |
-| `auto_event_types` | `event, goals, call, text` | Content types for auto-events |
-| `auto_event_weights` | *(blank)* | Weight per type (e.g. `call:40, text:30, event:20, goals:10`). Blank = equal. |
+Two paths to change settings:
 
-After editing the config, type `claude.reload` in-game to apply changes without restarting.
+1. **In-game Settings panel** — Phone > Social > Settings. Toggles + numeric inputs for runtime-tunable values. Writes back to `claude_config.cfg`, preserving your comments, and applies immediately.
+2. **Edit `claude_config.cfg` by hand** — then run `claude.reload` to pick up changes without restarting.
+
+### All settings
+
+| Setting | Default | Editable in UI | Description |
+|---|---|---|---|
+| `api_key` | *(required)* | ❌ | Your Anthropic API key |
+| `default_model` | `claude-haiku-4-5` | ❌ | Model for stories and storylines |
+| `fast_model` | `claude-haiku-4-5` | ❌ | Model for dialogue, events, calls, texts |
+| `max_tokens` | `512` | ❌ | Max length of responses |
+| `language` | `English` | ❌ | Language for all generated content |
+| `main_sim_name` | *(blank)* | ❌ | Your protagonist's full name. Falls back to currently selected sim if blank. |
+| `phone_allow_ghosts` | `true` | ✅ | Allow ghost sims to call/text |
+| `auto_events_enabled` | `false` | ✅ | Turn on random auto-events |
+| `auto_event_interval_minutes` | `20` | ✅ | Real-world minutes between checks |
+| `auto_event_chance` | `40` | ✅ | Percent chance each check fires |
+| `auto_event_types` | `event, goals, call, text` | ❌ | Content types for auto-events |
+| `auto_event_weights` | *(blank)* | ❌ | Weight per type (e.g. `call:40, text:30, event:20, goals:10`). Blank = equal. |
+| `reply_delay_enabled` | `true` | ✅ | Sims "think" for a few seconds before replying to texts |
+| `reply_delay_min_seconds` | `15` | ✅ | Floor of the reply delay range |
+| `reply_delay_max_seconds` | `90` | ✅ | Ceiling of the reply delay range |
 
 ---
 
@@ -166,30 +203,63 @@ A typical session with ~30 Haiku commands is about **$0.15**. A heavy session th
 
 ## Technical Notes
 
-- **Requires Python 3.7** for compilation — The Sims 4 only loads compiled `.pyc` bytecode, not `.py` source files
-- **Uses curl for API calls** — The game's embedded Python lacks SSL support, so HTTP calls go through `curl` (built into Windows 10+)
+- **Uses curl for API calls** — The game's embedded Python lacks SSL support, so HTTP calls go through `curl` (built into Windows 10+, available on macOS and most Linux distros by default)
 - **All API calls run on background threads** to prevent game freezes
 - **Notifications use the same pattern as MC Command Center** for compatibility
-- **No pip packages required** — everything uses Python stdlib + game APIs
+- **No pip packages required at runtime** — everything uses Python stdlib + game APIs
 
 ## Development
 
-The source is in `src/claude_ai/`. After making changes, run `python build.py` to compile and reinstall.
+End users don't need any of this — just download the release artifacts and drop them in your Mods folder (see Installation). The build scaffolding here is for contributing changes.
+
+**Build prerequisites:**
+- Python 3.12+ for the build script (the host script that drives compilation and packaging)
+- Python 3.7 for compiling mod bytecode — Sims 4 loads compiled `.pyc` from Python 3.7 specifically. Download [python-3.7.9-embed-amd64.zip](https://www.python.org/ftp/python/3.7.9/python-3.7.9-embed-amd64.zip) and extract to `tools/python37/`.
+
+**Build:**
+```
+python build.py            # builds + auto-installs to Sims 4 Mods folder
+python build.py --build    # builds only, no install
+```
+
+`build.py` does two things: compiles every `.py` in `src/` to Python-3.7 `.pyc` and zips them as `ClaudeAI.ts4script`, then runs `tools/package_builder.py` to bundle the XML tunings in `package_src/` into `ClaudeAI.package`. Both artifacts land at the repo root and (without `--build`) get copied into the Sims 4 Mods folder.
+
+**Linux note:** the build script's auto-install step expects a Windows-style Mods folder path. On Linux you can use `--build` to skip install and copy the artifacts to your Proton/Lutris prefix manually:
+
+```
+~/.steam/steam/steamapps/compatdata/<id>/pfx/drive_c/users/steamuser/Documents/Electronic Arts/The Sims 4/Mods/
+```
+
+The compiled bytecode itself is platform-agnostic — Python 3.7 `.pyc` runs the same on Windows, macOS, and Linux Proton.
 
 ```
 src/
-  claude_ai_loader.py  root-level entry point (game needs this)
+  claude_ai_loader.py        root-level entry point (game needs this)
   claude_ai/
-    __init__.py        mod entry point, startup notification, auto-events
-    config.py          reads claude_config.cfg from Mods folder
-    api_client.py      Claude API calls via curl subprocess
-    sim_context.py     reads sim data, protagonist system, relationship network
-    dialogue.py        dialogue, conversation, backstory generation
-    storyteller.py     story updates, storylines, relationship drama
-    event_generator.py random events, challenges, weekly goals
-    phone.py           AI-generated calls and texts from relationship sims
-    auto_events.py     background thread for random auto-events
-    notifications.py   in-game notification popups (top-right panel)
-    commands.py        all claude.* cheat commands
-    journal.py         persistent cross-session story memory
+    __init__.py              mod entry point, startup notification, auto-events
+    config.py                reads & writes claude_config.cfg, runtime settings layer
+    api_client.py            Claude API calls via curl subprocess
+    sim_context.py           reads sim data, protagonist system, relationship network
+    dialogue.py              dialogue, conversation, backstory generation
+    storyteller.py           story updates, storylines, relationship drama
+    event_generator.py       random events, challenges, weekly goals
+    phone.py                 AI-generated calls and texts from relationship sims
+    phone_ui_injection.py    grafts our SuperInteractions onto Sim _phone_affordances
+    phone_ui_interactions.py Phone > Social > Call / Text / Settings handlers
+    auto_events.py           background thread for random auto-events
+    events.py                reads upcoming calendar events + honoree/host data
+    milestones.py            detects & dedups life events (job, marriage, birth, ...)
+    moodlets.py              applies "Feeling X" buffs after emotionally-significant messages
+    notifications.py         in-game notification popups (top-right panel)
+    commands.py              all claude.* cheat commands
+    journal.py               persistent cross-session story memory
+
+package_src/                 XML tunings packed into ClaudeAI.package
+  Claude_Call.xml            SuperInteraction for Phone > Social > Call Someone
+  Claude_Text.xml            SuperInteraction for Phone > Social > Send Text
+  Claude_Settings.xml        SuperInteraction for Phone > Social > Settings
+
+tools/
+  package_builder.py         DBPF v2.1 packer (no S4S dependency)
+  python37/                  embedded Python 3.7 for compiling .pyc
 ```

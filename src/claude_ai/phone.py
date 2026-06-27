@@ -23,6 +23,88 @@ _last_active_recipient_id = None
 _pending_reply_recipient_id = None
 
 
+_REPLY_TEXT_INPUT_NAME = "reply_text"
+
+
+def _show_reply_input_dialog(caller_sim_info, anchor_sim):
+    """
+    Open a text-input dialog so the player can type a reply inline,
+    instead of having to use the cheat console.
+    On submit, calls generate_reply() with the typed text.
+    """
+    try:
+        from sims4.localization import LocalizationHelperTuning
+        from ui.ui_dialog_generic import UiDialogTextInputOkCancel
+        from distributor.shared_messages import IconInfoData
+
+        other_name = ""
+        try:
+            other_name = caller_sim_info.first_name or ""
+        except Exception:
+            pass
+
+        loc_title = LocalizationHelperTuning.get_raw_text(
+            f"Reply to {other_name}" if other_name else "Reply"
+        )
+        loc_text = LocalizationHelperTuning.get_raw_text(
+            "Type what you want to say. Claude will turn it into a message."
+        )
+        loc_send = LocalizationHelperTuning.get_raw_text("Send")
+        loc_cancel = LocalizationHelperTuning.get_raw_text("Cancel")
+
+        # UiDialogTextInputOkCancel needs build_msg to add a text_input field to
+        # the protobuf. We subclass to inject one named field directly instead
+        # of relying on the tuning system's text_inputs TunableTuple.
+        class _ReplyInputDialog(UiDialogTextInputOkCancel):
+            def on_text_input(self, text_input_name='', text_input=''):
+                self.text_input_responses[text_input_name] = text_input
+                return True
+
+            def build_msg(self, text_input_overrides=None, additional_tokens=(), **kwargs):
+                # Let the parent chain build the OK/Cancel buttons etc; it will
+                # also iterate self.text_inputs but that's an empty TunableTuple
+                # for our factory, so nothing gets added there. Then inject our
+                # one named field directly into the protobuf.
+                msg = super().build_msg(additional_tokens=additional_tokens, **kwargs)
+                ti = msg.text_input.add()
+                ti.text_input_name = _REPLY_TEXT_INPUT_NAME
+                # Tall text area so replies have room to breathe.
+                ti.height = 100
+                return msg
+
+        dialog = _ReplyInputDialog.TunableFactory().default(
+            anchor_sim,
+            text=lambda *_a, **_kw: loc_text,
+            title=lambda *_a, **_kw: loc_title,
+            text_ok=lambda *_a, **_kw: loc_send,
+            text_cancel=lambda *_a, **_kw: loc_cancel,
+        )
+
+        def _on_input_response(response_dialog):
+            try:
+                if not response_dialog.accepted:
+                    return
+                reply_text = (response_dialog.text_input_responses or {}).get(
+                    _REPLY_TEXT_INPUT_NAME, ""
+                ).strip()
+                if not reply_text:
+                    return
+                _mark_reply_intent(anchor_sim)
+                generate_reply(reply_text)
+            except Exception:
+                pass
+
+        dialog.add_listener(_on_input_response)
+        icon = IconInfoData(obj_instance=caller_sim_info) if caller_sim_info else None
+        if icon is not None:
+            dialog.show_dialog(icon_override=icon)
+        else:
+            dialog.show_dialog()
+        return True
+    except Exception:
+        return False
+
+
 def _show_phone_dialog(caller_sim_info, title, message, ring=True, recipient_sim_info=None):
     """
     Show a phone dialog with the caller's portrait and Reply/Dismiss buttons.
@@ -62,11 +144,15 @@ def _show_phone_dialog(caller_sim_info, title, message, ring=True, recipient_sim
 
         def _on_response(response_dialog):
             try:
-                if response_dialog.accepted:
-                    # Lock in which conversation the next claude.reply belongs to.
-                    # Without this, a text/call arriving between Reply click and the
-                    # cheat-console reply would steal the conversation context.
-                    _mark_reply_intent(anchor_sim)
+                if not response_dialog.accepted:
+                    return
+                # Lock in which conversation the next reply belongs to BEFORE
+                # opening the text-input dialog. Without this, a text/call
+                # arriving between Reply click and submit could steal context.
+                _mark_reply_intent(anchor_sim)
+                if not _show_reply_input_dialog(caller_sim_info, anchor_sim):
+                    # Fallback to the cheat-console path if the text dialog
+                    # fails to construct for any reason.
                     import sims4.commands
                     other_name = ""
                     try:
@@ -996,7 +1082,7 @@ def _pick_random_relationship_sim(recipient=None):
 
     # Hard filters: pets, and ghosts when disabled in config.
     contacts = [c for c in contacts if _is_human_sim(c.get("sim_info"))]
-    allow_ghosts = config.get_config().getboolean("claude_ai", "phone_allow_ghosts", fallback=True)
+    allow_ghosts = config.get_phone_allow_ghosts()
     if not allow_ghosts:
         contacts = [c for c in contacts if not _is_ghost(c.get("sim_info"))]
 

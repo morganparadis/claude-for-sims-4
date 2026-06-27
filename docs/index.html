@@ -219,6 +219,46 @@
   </div>
 </section>
 
+<section id="phone-ui" class="screenshot-strip">
+  <div class="container">
+    <h2>Now in your sim's phone <span class="muted small">(v2.0)</span></h2>
+    <p class="muted">No cheat console required for everyday use. Call, text, and tweak settings from the in-game phone the way your sim would.</p>
+    <div class="screenshot-grid">
+
+      <figure class="screenshot">
+        <img src="img/phoneuiexample.PNG" alt="Phone Social menu showing Settings, Send Text, and other Claude AI options alongside base game items">
+        <figcaption><strong>Phone &gt; Social</strong><br><span class="muted small">Call Someone, Send Text, and Settings live next to the base game's phone options.</span></figcaption>
+      </figure>
+
+      <figure class="screenshot">
+        <img src="img/callactionexample.PNG" alt="A sim with the Call Someone interaction queued in their action bar">
+        <figcaption><strong>Queues like any action</strong><br><span class="muted small">Call Someone slots into your sim's action queue alongside their other plans.</span></figcaption>
+      </figure>
+
+      <figure class="screenshot">
+        <img src="img/simusingphone.PNG" alt="A sim standing outside actually using their phone — the brief phone-tapping animation plays as the interaction runs">
+        <figcaption><strong>Plays the phone animation</strong><br><span class="muted small">Your sim actually pulls out their phone and uses it while the picker opens.</span></figcaption>
+      </figure>
+
+      <figure class="screenshot">
+        <img src="img/whotocallscreen.PNG" alt="Sim picker dialog titled Who to call with portraits of contacts">
+        <figcaption><strong>Pick a recipient</strong><br><span class="muted small">A real sim picker scoped to your contacts — household + relationships above the friendship threshold.</span></figcaption>
+      </figure>
+
+      <figure class="screenshot">
+        <img src="img/textuiexample.PNG" alt="Text dialog with the contact's portrait and a multi-line text area for composing the message">
+        <figcaption><strong>Type what you want to say</strong><br><span class="muted small">Multi-line text area with the recipient's portrait. Claude crafts the message in their voice from what you wrote.</span></figcaption>
+      </figure>
+
+      <figure class="screenshot">
+        <img src="img/uiexample.PNG" alt="Claude AI Settings panel showing toggles for auto events, reply delay, ghost contacts, and numeric inputs for chance and interval">
+        <figcaption><strong>Settings, in-game</strong><br><span class="muted small">Toggle auto-events, reply delays, ghost contacts; adjust chance and interval. Writes back to <code>claude_config.cfg</code>, preserving your comments.</span></figcaption>
+      </figure>
+
+    </div>
+  </div>
+</section>
+
 <section id="context" class="features container">
   <h2>It knows what's actually going on.</h2>
   <p class="muted">Every call and text is filtered through what's true in your save right now — not generic AI fill.</p>
@@ -511,6 +551,20 @@
   <ol class="changelog-list">
 
     <li class="changelog-entry">
+      <div class="changelog-date">June 27, 2026</div>
+      <div class="changelog-body">
+        <h3>The mod is in your sim's phone now (v2.0.0)</h3>
+        <ul>
+          <li><strong>Three new items under Phone &gt; Social</strong> — <em>Call Someone</em>, <em>Send Text</em>, <em>Settings</em>. No cheat console for daily use. Picking Call or Text opens a sim picker scoped to your contacts, then a multi-line text area where you type what you want to say; Claude crafts the message in the recipient's voice. Cheat commands still work alongside.</li>
+          <li><strong>Reply button on incoming dialogs opens a text input</strong> instead of dumping a "type <code>claude.reply</code> in the console" hint. You type your reply right there in the popup and the conversation continues.</li>
+          <li><strong>In-game Settings panel</strong> — toggles for auto-events, reply delays, ghost contacts on phone, plus numeric inputs for chance and interval. Changes save instantly to <code>claude_config.cfg</code> (preserving your comments) and apply without reloading the save. Static settings (API key, models, language) still live in the .cfg file.</li>
+          <li><strong>Compositions get more room</strong> — the Call/Text/Reply text inputs are now multi-line text areas instead of single-line boxes, so you can write a paragraph if you want.</li>
+          <li><strong>Cross-platform build script</strong> — auto-install now finds your Mods folder under Steam Proton, Lutris, Heroic, and generic Wine prefixes. End users don't need any of this — releases ship the compiled artifacts.</li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="changelog-entry">
       <div class="changelog-date">June 26, 2026</div>
       <div class="changelog-body">
         <h3>Stops guessing whose funeral it is (v1.2.2)</h3>
@@ -593,16 +647,6 @@
       <h3>Per-contact preferences</h3>
       <p>Block a specific sim from ever calling. Mark someone as "texts only, no calls." Set frequency per contact. Give your protagonist control over who can reach them.</p>
     </li>
-
-    <li class="roadmap-card">
-      <div class="roadmap-status status-planned">Coming in v2.0</div>
-      <h3>In-game UI — no more cheat console</h3>
-      <p>Big v2.0 push: settings, per-sim preferences, and most day-to-day actions move into proper in-game menus. Click your sim's phone to configure the mod or open the Claude AI hub. Click another sim to set per-contact preferences (block calls, mark as VIP, custom relationship label). The cheat console stays as a power-user fallback, but it stops being the primary way to interact.</p>
-    </li>
-
-  </ul>
-
-  <ul class="roadmap-list roadmap-list-second-row">
 
     <li class="roadmap-card">
       <div class="roadmap-status status-planned">Planned</div>

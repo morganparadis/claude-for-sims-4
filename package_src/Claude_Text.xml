@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<I c="ClaudePhoneMenuInteraction" i="interaction" m="claude_ai.phone_ui_interactions" n="Claude_PhoneMenu" s="13371000001">
+<I c="ClaudeTextInteraction" i="interaction" m="claude_ai.phone_ui_interactions" n="Claude_Text" s="13371000002">
   <V n="_affordance_key_override_for_autonomy" t="enabled">
     <T n="enabled">Phone_Fun</T>
   </V>
@@ -109,9 +109,9 @@
       </U>
     </V>
   </L>
-  <T n="category">13371000099</T>
+  <T n="category">105919</T>
   <V n="content_score" t="disabled" />
-  <T n="display_name">0x00000002</T>
+  <T n="display_name">0x20120533</T><!-- base-game "Send Text" -->
   <V n="display_tooltip" t="enabled">
     <T n="enabled">0x00000000</T>
   </V>

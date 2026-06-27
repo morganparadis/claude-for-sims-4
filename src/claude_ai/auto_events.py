@@ -43,13 +43,32 @@ def _log(message):
 # ---------------------------------------------------------------------------
 
 def is_enabled():
+    # Runtime override (set via the in-game Settings UI) wins over the
+    # static config file, so the player can toggle this from the phone
+    # without editing claude_config.cfg and reloading the save.
+    val = config.get_setting("auto_events_enabled")
+    if val is not None:
+        return bool(val)
     return config.get_config().getboolean("claude_ai", "auto_events_enabled", fallback=False)
 
 def get_interval_seconds():
-    minutes = config.get_config().getfloat("claude_ai", "auto_event_interval_minutes", fallback=20.0)
+    val = config.get_setting("auto_event_interval_minutes")
+    if val is not None:
+        try:
+            minutes = float(val)
+        except Exception:
+            minutes = 20.0
+    else:
+        minutes = config.get_config().getfloat("claude_ai", "auto_event_interval_minutes", fallback=20.0)
     return max(5.0, minutes) * 60  # minimum 5 minutes
 
 def get_chance():
+    val = config.get_setting("auto_event_chance")
+    if val is not None:
+        try:
+            return max(0, min(100, int(val)))
+        except Exception:
+            pass
     return config.get_config().getint("claude_ai", "auto_event_chance", fallback=40)
 
 def get_event_types():

@@ -1,26 +1,28 @@
 """
-Affordance injection -- adds our custom phone-UI interaction to the
-sim object tuning at game load time.
+Affordance injection -- adds our phone-UI interactions to the Sim
+object tuning at game load time.
 
 Sims 4 mods can't synthesise a brand-new SuperInteraction at runtime
 from pure Python -- the game's tuning pipeline requires an XML tuning
 backed by a .package. What we control from Python is which OBJECTS the
-tuned interaction shows up on. Our .package ships the Claude_PhoneMenu
-tuning (with a phone-routing category set inside it -- internally a
-PieMenuCategory in the engine type system, but it targets the phone
-wheel because of the Appropriateness_Phone tag and ACTOR target_type)
-and this module appends it to the Sim object's _super_affordances
-tuple after instance load.
+tuned interaction shows up on. Our .package ships three interactions
+(Claude_Call, Claude_Text, Claude_Settings) whose `category` points at
+the in-game phoneCategory_Social tile (instance 0x19DBF). This module
+appends them to the Sim object tuning's `_phone_affordances` after
+instance load so they appear under Phone > Social.
 """
 import os
 import datetime
 
 
-# Tuning name our companion .package creates -- the S4S tunable
-# instance for the interaction uses this as its instance name. We
-# look it up by name from the INTERACTION manager rather than by GUID
-# so the same Python keeps working if the package is ever regenerated.
-_PHONE_MENU_TUNING_NAME = "Claude_PhoneMenu"
+# Tuning names our .package ships. We look these up by name from the
+# INTERACTION manager rather than by GUID so the same Python keeps
+# working if the package is ever regenerated with different IDs.
+_PHONE_INTERACTION_NAMES = (
+    "Claude_Call",
+    "Claude_Text",
+    "Claude_Settings",
+)
 
 
 def _log(msg):
@@ -46,7 +48,6 @@ def _find_interaction_tuning(name):
             try:
                 if getattr(cls, "__name__", "") == name:
                     return cls
-                # tuning name is sometimes the snake_case form -- match either way
                 if getattr(cls, "tuning_name", "") == name:
                     return cls
             except Exception:
@@ -77,99 +78,40 @@ def _looks_like_sim(obj_tuning):
     return False
 
 
-def _append_affordance(obj_tuning, new_aff):
-    """Mutate the object tuning's super-affordance set to include `new_aff`.
-    _super_affordances is a tuple in the game, so we rebuild it."""
+def _append_affordance(obj_tuning, new_aff, attr_name="_phone_affordances"):
+    """Mutate the named affordance tuple on the tuning to include `new_aff`.
+
+    Phone-wheel items live under `_phone_affordances` (which the Sim's
+    `potential_phone_interactions()` iterates). Regular pie menus use
+    `_super_affordances` -- the phone filter ignores those."""
     try:
-        current = list(getattr(obj_tuning, "_super_affordances", ()) or ())
+        current = list(getattr(obj_tuning, attr_name, ()) or ())
         if new_aff in current:
-            return False  # already there, no-op
+            return False
         current.append(new_aff)
-        obj_tuning._super_affordances = tuple(current)
+        setattr(obj_tuning, attr_name, tuple(current))
         return True
     except Exception as e:
-        _log(f"append_affordance({obj_tuning.__name__}) failed: {type(e).__name__}: {e}")
+        _log(f"append_affordance({obj_tuning.__name__}, {attr_name}) failed: "
+             f"{type(e).__name__}: {e}")
         return False
 
 
-_PHONE_CATEGORY_TUNING_NAME = "Claude_PhoneCategory"
-# Type ID for PieMenuCategory resources (Sims 4 tuning system).
-# https://www.thesims4.dev/types -- 0x03E9D964 = PieMenuCategory.
-_TYPE_PIE_MENU_CATEGORY = 0x03E9D964
-
-
-def _dump_interaction_details(name, tuning):
-    """Spit a few load-time properties of an interaction tuning into the log."""
-    try:
-        cat = getattr(tuning, "category", None)
-        cat_id = getattr(cat, "guid64", None) if cat is not None else None
-        cat_name = getattr(cat, "__name__", None) if cat is not None else None
-        apps = getattr(tuning, "appropriateness_tags", None)
-        cats = getattr(tuning, "interaction_category_tags", None)
-        target = getattr(tuning, "target_type", None)
-        cls = getattr(tuning, "__name__", None)
-        mro_tail = [b.__name__ for b in getattr(tuning, "__mro__", ())[:5]]
-        _log(
-            f"  tuning {name}: class={cls} mro_head={mro_tail} "
-            f"category={cat_name}({cat_id}) target_type={target} "
-            f"appropriateness={apps} interaction_cats={cats}"
-        )
-    except Exception as e:
-        _log(f"  tuning {name}: dump failed: {type(e).__name__}: {e}")
-
-
-def _diagnose_phone_categories():
-    """List every PieMenuCategory tuning currently loaded -- helps confirm
-    our Claude_PhoneCategory was successfully read out of the .package."""
-    try:
-        import services
-        from sims4.resources import Types
-        # PieMenuCategory has its own resource type, mapped via Types if available
-        pie_type = getattr(Types, "PIE_MENU_CATEGORY", None)
-        if pie_type is None:
-            # Fall back to enum-value lookup
-            for name in dir(Types):
-                if "PIE" in name.upper() and "CATEGORY" in name.upper():
-                    pie_type = getattr(Types, name)
-                    break
-        if pie_type is None:
-            _log("diagnose_categories: could not locate PIE_MENU_CATEGORY Types enum value.")
-            return
-        mgr = services.get_instance_manager(pie_type)
-        if mgr is None:
-            _log("diagnose_categories: pie_menu_category instance manager not ready.")
-            return
-        count = 0
-        found_ours = None
-        for key, cls in mgr.types.items():
-            name = getattr(cls, "__name__", "?")
-            count += 1
-            if "Claude" in name:
-                found_ours = (key, name, cls)
-        _log(f"diagnose_categories: {count} PieMenuCategory tunings total.")
-        if found_ours:
-            key, name, cls = found_ours
-            icon = getattr(cls, "_icon", None)
-            disp = getattr(cls, "_display_name", None)
-            _log(f"  -> FOUND Claude category: key={hex(key) if isinstance(key, int) else key} "
-                 f"name={name} icon={icon} display_name={disp}")
-        else:
-            _log("  -> Claude_PhoneCategory NOT loaded. Package may be misformatted, "
-                 "or PieMenuCategory resource type ID is wrong in the packer.")
-    except Exception as e:
-        _log(f"diagnose_categories failed: {type(e).__name__}: {e}")
-
-
 def _inject_affordances():
-    """Run after all OBJECT tunings are loaded. Look up our phone
-    interaction and graft it onto every Sim object tuning."""
-    # Step 1: diagnose what's actually loaded from our .package
-    _diagnose_phone_categories()
-    phone_menu = _find_interaction_tuning(_PHONE_MENU_TUNING_NAME)
-    if phone_menu is None:
-        _log("Inject skipped -- Claude_PhoneMenu tuning not found. Is the .package installed?")
+    """Run after all OBJECT tunings are loaded. Look up each Claude phone
+    interaction by name and graft it onto every Sim object tuning's
+    `_phone_affordances`."""
+    tunings = []
+    for tuning_name in _PHONE_INTERACTION_NAMES:
+        cls = _find_interaction_tuning(tuning_name)
+        if cls is None:
+            _log(f"Inject: {tuning_name} not found -- skipping.")
+            continue
+        tunings.append((tuning_name, cls))
+
+    if not tunings:
+        _log("Inject aborted -- no Claude phone interactions loaded from .package.")
         return
-    _dump_interaction_details(_PHONE_MENU_TUNING_NAME, phone_menu)
 
     try:
         import services
@@ -179,28 +121,17 @@ def _inject_affordances():
             _log("Inject skipped -- OBJECT manager not ready.")
             return
 
-        sim_hits = 0
-        first_sim = None
-        for key, tuning in obj_mgr.types.items():
-            try:
-                if _looks_like_sim(tuning):
-                    if _append_affordance(tuning, phone_menu):
-                        sim_hits += 1
-                        if first_sim is None:
-                            first_sim = tuning
-            except Exception:
-                continue
+        sim_tunings = [t for k, t in obj_mgr.types.items() if _looks_like_sim(t)]
+        per_interaction = {}
+        for tuning_name, cls in tunings:
+            count = 0
+            for sim_tuning in sim_tunings:
+                if _append_affordance(sim_tuning, cls, "_phone_affordances"):
+                    count += 1
+            per_interaction[tuning_name] = count
 
-        _log(f"Inject complete -- phone menu on {sim_hits} sim tuning(s).")
-        # Sanity-check: confirm our affordance is actually in the sim's list now.
-        if first_sim is not None:
-            try:
-                affs = list(getattr(first_sim, "_super_affordances", ()) or ())
-                ours_in = phone_menu in affs
-                _log(f"  post-inject sample sim has {len(affs)} _super_affordances; "
-                     f"Claude_PhoneMenu present: {ours_in}")
-            except Exception:
-                pass
+        summary = ", ".join(f"{n}={c}" for n, c in per_interaction.items())
+        _log(f"Inject complete -- sim tunings touched per interaction: {summary}")
     except Exception as e:
         _log(f"_inject_affordances failed: {type(e).__name__}: {e}")
 

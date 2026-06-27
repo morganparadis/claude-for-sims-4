@@ -21,16 +21,60 @@ SRC_DIR = os.path.join(SCRIPT_DIR, "src")
 OUTPUT_FILE = os.path.join(SCRIPT_DIR, f"{MOD_NAME}.ts4script")
 CONFIG_FILE = os.path.join(SCRIPT_DIR, "claude_config.cfg")
 PACKAGE_FILE = os.path.join(SCRIPT_DIR, f"{MOD_NAME}.package")
-PYTHON37 = os.path.join(SCRIPT_DIR, "tools", "python37", "python.exe")
+
+
+def _find_python37():
+    """Locate the bundled Python 3.7 interpreter we use to compile .pyc.
+
+    Default to tools/python37/python.exe (Windows -- shipping the
+    embedded interpreter is by far the most common setup). On non-
+    Windows hosts we look for a system `python3.7` so Linux/macOS
+    contributors can build without a Windows interpreter in tree.
+    """
+    win_path = os.path.join(SCRIPT_DIR, "tools", "python37", "python.exe")
+    if os.path.isfile(win_path):
+        return win_path
+    nix_local = os.path.join(SCRIPT_DIR, "tools", "python37", "python")
+    if os.path.isfile(nix_local):
+        return nix_local
+    # System python3.7
+    import shutil as _sh
+    sys_py = _sh.which("python3.7")
+    if sys_py:
+        return sys_py
+    return win_path  # fall through with the win path so the error message is useful
+
+
+PYTHON37 = _find_python37()
 
 
 def find_mods_folder():
-    """Attempt to locate the Sims 4 Mods folder on this machine."""
-    docs = os.path.expanduser("~/Documents")
-    candidates = [
-        os.path.join(docs, "Electronic Arts", "The Sims 4", "Mods"),
-        os.path.expanduser("~/Documents/Electronic Arts/The Sims 4/Mods"),
+    """Attempt to locate the Sims 4 Mods folder on this machine.
+
+    Checks Windows/macOS native paths first, then common Linux
+    Proton/Wine prefix locations (Steam, Lutris, Heroic) so a Linux
+    contributor running through Proton gets auto-install too.
+    """
+    home = os.path.expanduser("~")
+    native = [
+        os.path.join(home, "Documents", "Electronic Arts", "The Sims 4", "Mods"),
     ]
+    # Linux Proton/Wine — the Sims 4 prefix's compatdata id varies per
+    # install, so glob for any directory that has the expected layout.
+    import glob as _g
+    proton_glob = [
+        # Steam Proton
+        os.path.join(home, ".steam/steam/steamapps/compatdata/*/pfx/"
+                     "drive_c/users/steamuser/Documents/Electronic Arts/The Sims 4/Mods"),
+        os.path.join(home, ".local/share/Steam/steamapps/compatdata/*/pfx/"
+                     "drive_c/users/steamuser/Documents/Electronic Arts/The Sims 4/Mods"),
+        # Lutris / Heroic / generic Wine — user-configured prefix paths
+        os.path.join(home, "Games/*/drive_c/users/*/Documents/Electronic Arts/The Sims 4/Mods"),
+        os.path.join(home, ".wine/drive_c/users/*/Documents/Electronic Arts/The Sims 4/Mods"),
+    ]
+    candidates = list(native)
+    for pattern in proton_glob:
+        candidates.extend(_g.glob(pattern))
     for path in candidates:
         if os.path.isdir(path):
             return path

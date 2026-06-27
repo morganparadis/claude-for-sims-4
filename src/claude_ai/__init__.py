@@ -15,7 +15,7 @@ Commands (open cheat console with Ctrl+Shift+C):
 """
 
 MOD_NAME = "Claude AI for The Sims 4"
-MOD_VERSION = "2.0.0"
+MOD_VERSION = "2.0.1"
 
 
 def _log(message):

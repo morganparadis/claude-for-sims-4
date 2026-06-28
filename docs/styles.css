@@ -319,6 +319,9 @@ kbd {
   font-size: clamp(1.2rem, 2.8vw, 1.95rem);
   margin-top: 0.2rem;
   margin-bottom: 0.75rem;
+  /* When the line wraps on narrow viewports, distribute words across
+     lines instead of orphaning the last word ("4") on its own row. */
+  text-wrap: balance;
 }
 
 .plumbob {

@@ -607,6 +607,19 @@ api_key  = </code></pre>
   <ol class="changelog-list">
 
     <li class="changelog-entry">
+      <div class="changelog-date">June 28, 2026</div>
+      <div class="changelog-body">
+        <h3>Llamafone — new name, four AI providers (v3.0)</h3>
+        <ul>
+          <li><strong>Renamed to Llamafone.</strong> The old "Claude AI for The Sims 4" name implied vendor lock-in; the new one doesn't. Same mod, new branding — phone tiles, settings panel, cheat commands (<code>llama.*</code>), config file, and notifications all rebrand in step.</li>
+          <li><strong>Bring your own AI.</strong> Pick <code>provider = claude | openai | gemini | ollama</code> in <code>llamafone.cfg</code> and Llamafone routes every call/text/story through whichever you choose. Cloud providers (Claude, OpenAI GPT, Google Gemini) need an API key; <strong>Ollama runs locally on your computer with no key, no internet, no cost</strong> — use whatever model your GPU can handle.</li>
+          <li><strong>Gemini's free tier covers most casual play.</strong> If you're cost-conscious, set <code>provider = gemini</code> + <code>default_model = gemini-1.5-flash</code> and play for free. New <code>llama.testprovider</code> cheat command fires a tiny round-trip so you can verify your config in 5 seconds before playing.</li>
+          <li><strong>No more emoji glitches.</strong> Local AI models sometimes mangle emoji into garbage rectangles in the Sims 4 UI. The mod now strips Unicode emoji and text emoticons from every response before they hit the dialog box, and the prompts forbid them. Plain readable text every time.</li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="changelog-entry">
       <div class="changelog-date">June 27, 2026</div>
       <div class="changelog-body">
         <h3>The mod is in your sim's phone now (v2.0.0)</h3>

@@ -15,7 +15,7 @@ Commands (open cheat console with Ctrl+Shift+C):
 """
 
 MOD_NAME = "Llamafone"
-MOD_VERSION = "3.0.0"
+MOD_VERSION = "3.0.1"
 
 
 def _log(message):
@@ -55,7 +55,7 @@ def _check_for_update():
                 "curl", "-s", "-L",
                 "-H", "Accept: application/vnd.github+json",
                 "-H", "User-Agent: Llamafone-Sims4-Mod",
-                "https://api.github.com/repos/morganparadis/claude-for-sims-4/releases/latest",
+                "https://api.github.com/repos/morganparadis/llamafone/releases/latest",
             ],
             capture_output=True,
             text=True,
@@ -149,7 +149,7 @@ try:
                 if latest:
                     update_line = (
                         f"\n\n** UPDATE AVAILABLE: v{latest} **\n"
-                        f"Download at morganparadis.github.io/claude-for-sims-4/"
+                        f"Download at morganparadis.github.io/llamafone/"
                     )
 
                 if config.is_configured():

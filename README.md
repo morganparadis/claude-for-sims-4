@@ -1,6 +1,8 @@
 # Llamafone
 
-AI-powered phone calls, texts, dialogue, storylines, and random events for The Sims 4. Bring your own AI — Claude, OpenAI, Gemini, or a local Ollama model — and your sims get distinct voices, persistent memory, and a real phone UI under Social.
+A phone-first AI mod for The Sims 4. Random sims call and text you in character — voices shaped by their traits, mood, relationships, and what's actually happening in your save. Bring your own AI — Claude, OpenAI, Gemini, or a local Ollama model — and pick up calls and texts that read like they were written for the people in front of you.
+
+Story updates, random events, and 3-act storylines are in the box too, for when you want them — but the headline is the phone.
 
 ---
 
@@ -68,31 +70,7 @@ The journal gives the AI memory across sessions — generated events, stories, a
 
 Open the cheat console with `Ctrl+Shift+C`, type a command, press Enter.
 
-### Dialogue
-| Command | What it does |
-|---|---|
-| `llama.dialogue` | 4-5 in-character lines for your active sim |
-| `llama.dialogue_situation just got promoted` | Dialogue for a specific situation |
-| `llama.backstory` | A backstory and personality reveal for the active sim |
-
-### Storytelling
-| Command | What it does |
-|---|---|
-| `llama.story` | 2-3 paragraph narrative update for the household |
-| `llama.storyline` | Full 3-act storyline with gameplay goals |
-| `llama.storyline_theme romance` | Storyline with a specific theme (try: rivalry, mystery, rags to riches, family drama, haunting) |
-| `llama.drama` | Relationship drama arc between two household members |
-
-### Events & Challenges
-| Command | What it does |
-|---|---|
-| `llama.event` | A surprise random event to shake up your session |
-| `llama.goals` | 5 session goals (mixed easy/hard, with a stretch goal) |
-| `llama.challenge` | Medium difficulty gameplay challenge |
-| `llama.challenge_easy` | Easy challenge |
-| `llama.challenge_hard` | Hard challenge with strict rules |
-
-### Phone Calls & Texts
+### Phone Calls & Texts (the main event)
 | Command | What it does |
 |---|---|
 | `llama.call` | Incoming phone call from a random relationship sim |
@@ -107,9 +85,7 @@ Each sim has a unique voice based on their **age, traits, mood, career, and aspi
 
 **Sims also remember big life events.** When something significant happens in your game — a sim quits their job, gets promoted, has a baby, gets married, ages up — the mod picks it up automatically and references it in calls and texts. Each contact only brings it up once, so the same sim won't keep asking how leaving your job is going across five different calls.
 
-**Realistic reply delays** — when you text a sim, they "think" for a few seconds before responding instead of replying instantly. Close friends reply fast; lazy or hostile sims drag. Toggle from the in-game Settings panel, or set `reply_delay_enabled = false` in the config.
-
-**Mood buffs** — when a message is genuinely emotionally significant (big news, a fight, a confession, a flirty escalation), the recipient sim gets a matching "Feeling X" moodlet (Happy / Sad / Angry / Confident / Flirty / Playful / Energized / Focused / Inspired). Routine chats and small talk don't trigger one. There's a 30-minute per-sim cooldown to prevent stacking.
+**Realistic reply delays** — when you text a sim, they "think" for a few seconds before responding instead of replying instantly. Close friends reply fast; lazy or hostile sims drag. Calls reply instantly. Toggle from the in-game Settings panel, or set `reply_delay_enabled = false` in the config.
 
 ### Phone UI (Phone > Social)
 
@@ -122,6 +98,34 @@ The phone itself has three Llamafone items under the Social tile — no cheat co
 | **Settings** | Opens an in-game settings panel with toggles for auto-events, reply delays, ghost contacts, etc. Picking a row flips a bool or opens a numeric input. Changes save instantly to `llamafone.cfg` (preserving your comments) and apply without reloading the save. |
 
 The cheat commands (`llama.call`, `llama.sendtext`, etc.) still work the same way alongside the UI.
+
+### …and the rest
+
+Llamafone is a phone mod, but the AI plumbing is general-purpose. These commands ship in the box for when you want them — they're not the focus.
+
+#### Dialogue
+| Command | What it does |
+|---|---|
+| `llama.dialogue` | 4-5 in-character lines for your active sim |
+| `llama.dialogue_situation just got promoted` | Dialogue for a specific situation |
+| `llama.backstory` | A backstory and personality reveal for the active sim |
+
+#### Storytelling
+| Command | What it does |
+|---|---|
+| `llama.story` | 2-3 paragraph narrative update for the household |
+| `llama.storyline` | Full 3-act storyline with gameplay goals |
+| `llama.storyline_theme romance` | Storyline with a specific theme (try: rivalry, mystery, rags to riches, family drama, haunting) |
+| `llama.drama` | Relationship drama arc between two household members |
+
+#### Events & Challenges
+| Command | What it does |
+|---|---|
+| `llama.event` | A surprise random event to shake up your session |
+| `llama.goals` | 5 session goals (mixed easy/hard, with a stretch goal) |
+| `llama.challenge` | Medium difficulty gameplay challenge |
+| `llama.challenge_easy` | Easy challenge |
+| `llama.challenge_hard` | Hard challenge with strict rules |
 
 ### General
 | Command | What it does |
@@ -153,12 +157,13 @@ Auto-events fire randomly while you play without you having to ask. They use **r
 **Turn on in `llamafone.cfg`:**
 ```ini
 auto_events_enabled = true
-auto_event_interval_minutes = 20   ; check every 20 real minutes
-auto_event_chance = 40             ; 40% chance each check fires something
-auto_event_types = event, goals, call, text   ; what can fire
+auto_event_interval_minutes = 20      ; check every 20 real minutes
+auto_event_chance = 40                ; 40% chance each check fires something
+auto_event_types = call, text         ; phone-first default -- random calls and texts
+auto_event_weights = call:50, text:50 ; 50/50 mix
 ```
 
-Available auto-event types: `event`, `goals`, `story`, `drama`, `call`, `text`
+Available auto-event types: `call`, `text`, `event`, `goals`, `story`, `drama`. The default is **phone-only** (`call, text`) to match the mod's focus — add the others to your `auto_event_types` if you want the full mix.
 
 With the defaults (20 min interval, 40% chance), you get something roughly every 50 real minutes on average.
 
@@ -191,8 +196,8 @@ Two paths to change settings:
 | `auto_events_enabled` | `false` | ✅ | Turn on random auto-events |
 | `auto_event_interval_minutes` | `20` | ✅ | Real-world minutes between checks |
 | `auto_event_chance` | `40` | ✅ | Percent chance each check fires |
-| `auto_event_types` | `event, goals, call, text` | ❌ | Content types for auto-events |
-| `auto_event_weights` | *(blank)* | ❌ | Weight per type (e.g. `call:40, text:30, event:20, goals:10`). Blank = equal. |
+| `auto_event_types` | `call, text` | ❌ | Content types for auto-events. Add `event, goals, story, drama` for the full mix. |
+| `auto_event_weights` | `call:50, text:50` | ❌ | Weight per type (e.g. `call:40, text:30, event:20, goals:10`). |
 | `reply_delay_enabled` | `true` | ✅ | Sims "think" for a few seconds before replying to texts |
 | `reply_delay_min_seconds` | `15` | ✅ | Floor of the reply delay range |
 | `reply_delay_max_seconds` | `90` | ✅ | Ceiling of the reply delay range |
@@ -263,7 +268,6 @@ src/
     auto_events.py           background thread for random auto-events
     events.py                reads upcoming calendar events + honoree/host data
     milestones.py            detects & dedups life events (job, marriage, birth, ...)
-    moodlets.py              applies "Feeling X" buffs after emotionally-significant messages
     notifications.py         in-game notification popups (top-right panel)
     commands.py              all llama.* cheat commands
     journal.py               persistent cross-session story memory

@@ -23,8 +23,8 @@ _log(f"__file__: {__file__}")
 
 try:
     import llamafone
-    _log("claude_ai package imported successfully")
+    _log("llamafone package imported successfully")
 except Exception as e:
-    _log(f"claude_ai import FAILED: {type(e).__name__}: {e}")
+    _log(f"llamafone import FAILED: {type(e).__name__}: {e}")
     import traceback
     _log(traceback.format_exc())

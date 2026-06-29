@@ -51,14 +51,15 @@ def _log_exc(label):
         pass
 
 
-def _claude_ready():
+def _mod_ready():
     """Make sure the mod is configured before we trigger an API call."""
     try:
-        if not config.get_api_key():
+        if not config.is_configured():
             notifications.show_error(
-                "Claude AI is not configured yet. Open Documents/"
-                "ClaudeAI/config.json and add your Anthropic API key, "
-                "then reload the save."
+                "Llamafone is not configured yet. Open llamafone.cfg in "
+                "your Mods folder, pick a provider, and add your API key "
+                "(or use provider=ollama for no-key local AI). Then run "
+                "llama.reload."
             )
             return False
     except Exception:
@@ -192,7 +193,7 @@ def _show_recipient_picker(kind, anchor_sim, on_picked):
         verb = "Call" if kind == "call" else "Text"
         loc_title = LocalizationHelperTuning.get_raw_text(f"Who to {verb.lower()}?")
         loc_text = LocalizationHelperTuning.get_raw_text(
-            f"Pick a sim to {verb.lower()}. Claude will write the "
+            f"Pick a sim to {verb.lower()}. Llamafone will craft the "
             f"{verb.lower()} once you tell it what to say."
         )
         loc_ok = LocalizationHelperTuning.get_raw_text(verb)
@@ -274,7 +275,7 @@ def _show_recipient_picker(kind, anchor_sim, on_picked):
         return False
 
 
-class _ClaudePhoneInteractionBase(SuperInteraction):
+class _LlamafonePhoneInteractionBase(SuperInteraction):
     """Shared shell: play the brief phone animation, then fire our action.
 
     Subclasses override `_fire()` with the actual gameplay call. We yield
@@ -289,8 +290,8 @@ class _ClaudePhoneInteractionBase(SuperInteraction):
     def _run_interaction_gen(self, timeline):
         _log(f"{type(self).__name__}._run_interaction_gen() entered, sim={getattr(self.sim, 'first_name', '?')}")
         try:
-            ready = _claude_ready()
-            _log(f"  _claude_ready() -> {ready}")
+            ready = _mod_ready()
+            _log(f"  _mod_ready() -> {ready}")
             if ready:
                 self._fire()
                 _log(f"  _fire() returned")
@@ -318,18 +319,18 @@ def _start_outbound(kind, sim_info):
         return
 
 
-class LlamafoneCallInteraction(_ClaudePhoneInteractionBase):
-    """Phone > Social > Claude Call -- pick a recipient, type a topic,
-    Claude crafts and delivers the call."""
+class LlamafoneCallInteraction(_LlamafonePhoneInteractionBase):
+    """Phone > Social > Call Someone -- pick a recipient, type a topic,
+    Llamafone crafts and delivers the call."""
 
     def _fire(self):
         sim_info = getattr(self.sim, "sim_info", None) or self.sim
         _start_outbound("call", sim_info)
 
 
-class LlamafoneTextInteraction(_ClaudePhoneInteractionBase):
-    """Phone > Social > Claude Text -- pick a recipient, type a message,
-    Claude crafts and sends the text."""
+class LlamafoneTextInteraction(_LlamafonePhoneInteractionBase):
+    """Phone > Social > Send Text -- pick a recipient, type a message,
+    Llamafone crafts and sends the text."""
 
     def _fire(self):
         sim_info = getattr(self.sim, "sim_info", None) or self.sim
@@ -443,7 +444,7 @@ def _show_settings_picker(anchor_sim):
         except Exception:
             version = "?"
 
-        loc_title = LocalizationHelperTuning.get_raw_text(f"Claude AI Settings (v{version})")
+        loc_title = LocalizationHelperTuning.get_raw_text(f"Llamafone Settings (v{version})")
         loc_text = LocalizationHelperTuning.get_raw_text(
             "Pick a setting to change. Toggles flip on/off; numeric "
             "settings open a text box. Changes save instantly and apply "
@@ -602,8 +603,8 @@ def _show_int_input(anchor_sim, setting):
         return False
 
 
-class LlamafoneSettingsInteraction(_ClaudePhoneInteractionBase):
-    """Phone > Social > Claude Settings -- opens an in-game settings
+class LlamafoneSettingsInteraction(_LlamafonePhoneInteractionBase):
+    """Phone > Social > Settings -- opens the in-game settings
     panel listing the runtime-toggleable settings (auto events on/off,
     chance, interval, reply delay). Selecting a row flips a bool or
     opens a text-input dialog for a numeric value; changes are saved

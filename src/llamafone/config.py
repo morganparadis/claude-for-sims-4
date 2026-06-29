@@ -108,11 +108,6 @@ def _set_cfg_value(key, value, section=None):
     comments and unrelated lines. Appends the key to the end of the
     section if it isn't present. Returns True on success.
 
-    `section` defaults to whichever section actually exists in the .cfg
-    (`_SECTION`), so a v2 user with `[claude_ai]` gets writes
-    INTO that section -- we don't sprinkle a stray `[llamafone]` header
-    underneath their config. Fresh installs write to `[llamafone]`.
-
     We do this line-by-line instead of using configparser.write() so the
     player's comments / blank lines / inline notes survive untouched.
     """

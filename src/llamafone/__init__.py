@@ -15,7 +15,7 @@ Commands (open cheat console with Ctrl+Shift+C):
 """
 
 MOD_NAME = "Llamafone"
-MOD_VERSION = "3.0.2"
+MOD_VERSION = "3.0.3"
 
 
 def _log(message):
@@ -86,7 +86,7 @@ try:
 
     import sims4.commands
     import threading
-    from . import commands   # noqa: F401 -- registers all claude.* cheat commands
+    from . import commands   # noqa: F401 -- registers all llama.* cheat commands
     from . import auto_events
 
     auto_events.start()  # starts only if auto_events_enabled = true in config

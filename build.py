@@ -202,30 +202,6 @@ def install(script_file):
     else:
         print(f"  Skipped config (already exists -- your API key is safe)")
 
-    # Clean up the previous-build leftover and any pre-rename ClaudeAI
-    # files so nothing stale survives in the Mods folder.
-    for stale in (
-        "ClaudeAI_Test.ts4script",
-        "ClaudeAI.ts4script",
-        "ClaudeAI.package",
-        "ClaudeAI_Journal.json",
-        "ClaudeAI_Settings.json",
-        "ClaudeAI_SimSnapshots.json",
-        "ClaudeAI_Milestones.json",
-        "ClaudeAI_MilestoneRefs.json",
-        "ClaudeAI_LastPrompt.txt",
-        "ClaudeAI_BuffList.txt",
-        "ClaudeAI_Log.txt",
-        "claude_config.cfg",
-    ):
-        stale_path = os.path.join(mods_folder, stale)
-        if os.path.exists(stale_path):
-            try:
-                os.remove(stale_path)
-                print(f"  Cleaned up: {stale}")
-            except OSError:
-                pass
-
     print()
     print("Installation complete! Restart The Sims 4 to load the mod.")
     print("Then open the cheat console (Ctrl+Shift+C) and type: llama.status")

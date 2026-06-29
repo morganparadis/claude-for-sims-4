@@ -1,5 +1,5 @@
 """
-Collects information about the current game state to give Claude rich context.
+Collects information about the current game state to give the AI rich context.
 All Sims 4 API calls are wrapped in try/except to handle version differences gracefully.
 """
 

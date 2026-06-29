@@ -17,8 +17,6 @@ gets normalized at this boundary -- callers only see:
          system=str | None, use_fast_model=bool
     out: callback(text: str | None, error: str | None)
 
-`call_claude_async` is kept as a thin alias of `call_ai_async` for
-backward compatibility with code paths still using the v2 name.
 """
 import datetime
 import json
@@ -330,7 +328,3 @@ def call_ai_async(messages, system=None, use_fast_model=False, callback=None):
     thread.start()
     return thread
 
-
-# Backward-compat alias so legacy call sites (or anyone forking from v2)
-# don't break mid-migration. New code should call_ai_async directly.
-call_claude_async = call_ai_async

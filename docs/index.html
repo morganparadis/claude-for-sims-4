@@ -99,7 +99,7 @@
       <span class="sparkle s9"></span>
       <img src="img/llamafonelogo-square.PNG" alt="" class="hero-logo">
     </div>
-    <h1><span class="brand-claude">
+    <h1><span class="brand-llamafone">
       <span class="text-sparkle ts1"></span>
       <span class="text-sparkle ts2"></span>
       <span class="text-sparkle ts3"></span>
@@ -611,7 +611,7 @@ api_key  = </code></pre>
       <div class="changelog-body">
         <h3>Llamafone — new name, four AI providers (v3.0)</h3>
         <ul>
-          <li><strong>Renamed to Llamafone.</strong> The old "Claude AI for The Sims 4" name implied vendor lock-in; the new one doesn't. Same mod, new branding — phone tiles, settings panel, cheat commands (<code>llama.*</code>), config file, and notifications all rebrand in step.</li>
+          <li><strong>Renamed to Llamafone.</strong> The mod is now called Llamafone. Same mod, new branding — phone tiles, settings panel, cheat commands (<code>llama.*</code>), config file, and notifications all rebrand in step.</li>
           <li><strong>Bring your own AI.</strong> Pick <code>provider = claude | openai | gemini | ollama</code> in <code>llamafone.cfg</code> and Llamafone routes every call/text/story through whichever you choose. Cloud providers (Claude, OpenAI GPT, Google Gemini) need an API key; <strong>Ollama runs locally on your computer with no key, no internet, no cost</strong> — use whatever model your GPU can handle.</li>
           <li><strong>Gemini's free tier covers most casual play.</strong> If you're cost-conscious, set <code>provider = gemini</code> + <code>default_model = gemini-1.5-flash</code> and play for free. New <code>llama.testprovider</code> cheat command fires a tiny round-trip so you can verify your config in 5 seconds before playing.</li>
           <li><strong>No more emoji glitches.</strong> Local AI models sometimes mangle emoji into garbage rectangles in the Sims 4 UI. The mod now strips Unicode emoji and text emoticons from every response before they hit the dialog box, and the prompts forbid them. Plain readable text every time.</li>
@@ -650,7 +650,7 @@ api_key  = </code></pre>
       <div class="changelog-body">
         <h3>Knows that a Sims week is a season (v1.2.1)</h3>
         <ul>
-          <li>Sims 4 time runs faster than real life: 1 in-game week = 1 season by default. The mod was telling Claude "Christmas Vacation in 2 weeks" — which reads like a casual fortnight away in human terms but is actually 2 seasons away in sim terms.</li>
+          <li>Sims 4 time runs faster than real life: 1 in-game week = 1 season by default. The mod was telling the AI "Christmas Vacation in 2 weeks" — which reads like a casual fortnight away in human terms but is actually 2 seasons away in sim terms.</li>
           <li>Now each upcoming-event line includes the season it falls in (<code>Christmas Vacation (in 2 weeks, Winter)</code>), and the system prompt explains the calendar rule so the AI paces references naturally — "next season", "a while away", "soon" — instead of counting weeks.</li>
         </ul>
       </div>

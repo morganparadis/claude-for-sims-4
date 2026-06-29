@@ -17,8 +17,6 @@ AI-powered phone calls, texts, dialogue, storylines, and random events for The S
 
 No Python install required for end users — the release ships compiled `.pyc` bytecode.
 
-**Upgrading from v2.x (Claude AI for The Sims 4)?** Drop the v3 files in alongside your existing `claude_config.cfg` and you're done — Llamafone reads your v2 config and saved settings automatically (the lookup checks both `llamafone.cfg` and `claude_config.cfg`, and both the `[llamafone]` and `[claude_ai]` section headers). Rename the file to `llamafone.cfg` whenever you feel like it.
-
 ---
 
 ## Choose your AI provider
@@ -119,7 +117,7 @@ The phone itself has three Llamafone items under the Social tile — no cheat co
 
 | Tile | What it does |
 |---|---|
-| **Call Someone** | Opens a sim picker scoped to your contacts → pick a recipient → type a topic → Claude crafts and delivers the call |
+| **Call Someone** | Opens a sim picker scoped to your contacts → pick a recipient → type a topic → Llamafone crafts and delivers the call |
 | **Send Text** | Same flow as Call, but for texts |
 | **Settings** | Opens an in-game settings panel with toggles for auto-events, reply delays, ghost contacts, etc. Picking a row flips a bool or opens a numeric input. Changes save instantly to `llamafone.cfg` (preserving your comments) and apply without reloading the save. |
 
@@ -254,7 +252,7 @@ src/
   llamafone/
     __init__.py              mod entry point, startup notification, auto-events
     config.py                reads & writes llamafone.cfg, runtime settings layer
-    api_client.py            Claude API calls via curl subprocess
+    api_client.py            AI provider HTTP calls (Claude/OpenAI/Gemini/Ollama) via curl
     sim_context.py           reads sim data, protagonist system, relationship network
     dialogue.py              dialogue, conversation, backstory generation
     storyteller.py           story updates, storylines, relationship drama
@@ -267,7 +265,7 @@ src/
     milestones.py            detects & dedups life events (job, marriage, birth, ...)
     moodlets.py              applies "Feeling X" buffs after emotionally-significant messages
     notifications.py         in-game notification popups (top-right panel)
-    commands.py              all claude.* cheat commands
+    commands.py              all llama.* cheat commands
     journal.py               persistent cross-session story memory
 
 package_src/                 XML tunings packed into Llamafone.package

@@ -1,17 +1,17 @@
 /* ------------------------------------------------------------------
-   Claude AI for The Sims 4 — landing page
+   Llamafone — landing page
    Playful, light, Sims-themed (no dark mode)
    ------------------------------------------------------------------ */
 
 :root {
-  /* Sims plumbob green + Claude orange palette */
+  /* Sims plumbob green + warm peach accent palette */
   --plumbob:        #6FCF40;
   --plumbob-deep:   #4f9c25;
   --plumbob-dark:   #3a7012;
   --plumbob-soft:   #d6f896;
-  --claude:         #E08B59;
-  --claude-deep:    #C66F3F;
-  --claude-soft:    #fbe3d3;
+  --accent:         #E08B59;
+  --accent-deep:    #C66F3F;
+  --accent-soft:    #fbe3d3;
   --sky:            #B3E0F2;
   --sky-deep:       #6dc6e7;
   --pink:           #FF6B9D;
@@ -65,7 +65,7 @@ h1, h2, h3, h4 {
 
 h1 { font-size: clamp(2.25rem, 5vw, 3.6rem); letter-spacing: -0.01em; }
 
-.brand-claude {
+.brand-llamafone {
   background: linear-gradient(135deg, #E89870 0%, #C8693B 50%, #9A4D21 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -82,10 +82,10 @@ h1 { font-size: clamp(2.25rem, 5vw, 3.6rem); letter-spacing: -0.01em; }
     drop-shadow(0 4px 14px rgba(240, 168, 120, 0.30));
 }
 
-/* Sparkles dancing around the "Claude AI" gradient text */
+/* Sparkles dancing around the brand gradient text */
 .text-sparkle {
   position: absolute;
-  background: var(--claude);
+  background: var(--accent);
   clip-path: polygon(
     50% 0%, 58% 42%, 100% 50%, 58% 58%,
     50% 100%, 42% 58%, 0% 50%, 42% 42%
@@ -220,7 +220,7 @@ kbd {
 }
 .hero::before {
   width: 220px; height: 220px;
-  background: var(--claude-soft);
+  background: var(--accent-soft);
   top: 12%; right: -60px;
 }
 .hero::after {
@@ -259,7 +259,7 @@ kbd {
   border-bottom: none;   /* defeat the global a-link underline */
   font-size: 1.05rem;
 }
-.topbar-brand:hover { color: var(--claude-deep); border-bottom: none; }
+.topbar-brand:hover { color: var(--accent-deep); border-bottom: none; }
 .topbar-logo {
   width: 30px;
   height: 30px;
@@ -282,8 +282,8 @@ kbd {
   font-size: 0.95rem;
 }
 .topbar-links a:hover {
-  background: var(--claude-soft);
-  color: var(--claude-deep);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
   border-bottom: none;
 }
 .topbar-patreon {
@@ -335,7 +335,7 @@ kbd {
 
 /* Hero logo treatment — square mascot image with the same sparkle ring
    and gentle bob animation the SVG plumbob used to have, so the page
-   keeps its motion personality after rebranding from Claude AI -> Llamafone. */
+   keeps the sparkly motion personality the SVG plumbob used to have. */
 .hero-logo-wrap {
   position: relative;
   margin: 0 auto 1.25rem;
@@ -371,7 +371,7 @@ kbd {
 
 .sparkle {
   position: absolute;
-  background: var(--claude);
+  background: var(--accent);
   /* 4-pointed star shape */
   clip-path: polygon(
     50% 0%, 58% 42%, 100% 50%, 58% 58%,
@@ -434,8 +434,8 @@ kbd {
   border: 1px solid var(--line);
 }
 .badge + .badge {
-  color: var(--claude-deep);
-  border-color: var(--claude-soft);
+  color: var(--accent-deep);
+  border-color: var(--accent-soft);
 }
 
 /* -------- Generic section spacing -------- */
@@ -479,7 +479,7 @@ section > .container > h2::after {
   display: block;
   width: 64px;
   height: 4px;
-  background: linear-gradient(90deg, var(--plumbob), var(--claude));
+  background: linear-gradient(90deg, var(--plumbob), var(--accent));
   border-radius: 4px;
   margin: 0.85rem auto 0;
 }
@@ -534,7 +534,7 @@ section > p { max-width: 780px; margin-left: auto; margin-right: auto; }
 }
 .icon-call      { background: linear-gradient(135deg, #86d33b, #5BAA32); }
 .icon-text      { background: linear-gradient(135deg, #ff89b3, #FF6B9D); }
-.icon-story     { background: linear-gradient(135deg, #f5b489, var(--claude-deep)); }
+.icon-story     { background: linear-gradient(135deg, #f5b489, var(--accent-deep)); }
 .icon-event     { background: linear-gradient(135deg, #ffd166, #f5a623); }
 .icon-storyline { background: linear-gradient(135deg, #c8a8ff, #9b75e8); }
 .icon-auto      { background: linear-gradient(135deg, #ffb88c, #ff7e5f); }
@@ -792,7 +792,7 @@ section > p { max-width: 780px; margin-left: auto; margin-right: auto; }
   color: var(--ink-soft);
 }
 .provider-tag {
-  background: var(--claude);
+  background: var(--accent);
   color: #fff;
   font-size: 0.7rem;
   font-weight: 700;
@@ -845,7 +845,7 @@ section > p { max-width: 780px; margin-left: auto; margin-right: auto; }
 .cost-table th {
   background: rgba(224, 139, 89, 0.14);
   font-family: 'Fredoka', sans-serif;
-  color: var(--claude-deep);
+  color: var(--accent-deep);
   font-weight: 600;
 }
 .cost-table tr:last-child td { border-bottom: none; }
@@ -883,7 +883,7 @@ section > p { max-width: 780px; margin-left: auto; margin-right: auto; }
   transition: color 0.15s;
 }
 .faq-item summary::-webkit-details-marker { display: none; }
-.faq-item summary:hover { color: var(--claude-deep); }
+.faq-item summary:hover { color: var(--accent-deep); }
 
 /* Custom plus/minus indicator on the right */
 .faq-item summary::after {
@@ -894,8 +894,8 @@ section > p { max-width: 780px; margin-left: auto; margin-right: auto; }
   transform: translateY(-50%);
   width: 26px;
   height: 26px;
-  background: var(--claude-soft);
-  color: var(--claude-deep);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -906,7 +906,7 @@ section > p { max-width: 780px; margin-left: auto; margin-right: auto; }
 }
 .faq-item[open] summary::after {
   content: "−";
-  background: var(--claude);
+  background: var(--accent);
   color: white;
   transform: translateY(-50%) rotate(180deg);
 }
@@ -941,7 +941,7 @@ section > p { max-width: 780px; margin-left: auto; margin-right: auto; }
   top: 8px;
   bottom: 8px;
   width: 2px;
-  background: linear-gradient(180deg, var(--claude-soft), var(--plumbob-soft));
+  background: linear-gradient(180deg, var(--accent-soft), var(--plumbob-soft));
   border-radius: 2px;
 }
 
@@ -961,16 +961,16 @@ section > p { max-width: 780px; margin-left: auto; margin-right: auto; }
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: var(--claude);
+  background: var(--accent);
   border: 3px solid var(--cream);
-  box-shadow: 0 0 0 2px var(--claude);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 .changelog-date {
   font-family: 'Fredoka', sans-serif;
   font-weight: 600;
   font-size: 0.92rem;
-  color: var(--claude-deep);
+  color: var(--accent-deep);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   margin-bottom: 0.25rem;
@@ -991,7 +991,7 @@ section > p { max-width: 780px; margin-left: auto; margin-right: auto; }
   padding: 4px 0;
   font-size: 0.97rem;
 }
-.changelog-body li::marker { color: var(--claude); }
+.changelog-body li::marker { color: var(--accent); }
 
 .changelog-footer {
   text-align: center;
@@ -1071,7 +1071,7 @@ section > p { max-width: 780px; margin-left: auto; margin-right: auto; }
 }
 .status-open {
   background: rgba(224, 139, 89, 0.28);
-  color: var(--claude-deep);
+  color: var(--accent-deep);
 }
 
 /* Second roadmap row -- centered under the top three cards. Width tuned
@@ -1117,18 +1117,18 @@ section > p { max-width: 780px; margin-left: auto; margin-right: auto; }
   max-width: 720px;
   margin: 0 auto;
 }
-.bugreport-card h2 { color: var(--claude-deep); }
+.bugreport-card h2 { color: var(--accent-deep); }
 .bugreport-card p { color: var(--ink-soft); }
-.bugreport-card .muted a { color: var(--claude-deep); border-bottom-color: rgba(198, 111, 63, 0.4); }
+.bugreport-card .muted a { color: var(--accent-deep); border-bottom-color: rgba(198, 111, 63, 0.4); }
 .bugreport-card .muted a:hover { color: #7a3c16; border-bottom-color: #7a3c16; }
 .bugreport-card .btn + p { margin-top: 1.5rem; }
 .bugreport-card .btn-ghost-orange + p { margin-top: 1.5rem; }
 
 .btn-ghost-orange {
   background: white;
-  color: var(--claude-deep);
-  box-shadow: 0 4px 0 var(--claude-deep), var(--shadow-sm);
-  border: 2px solid var(--claude);
+  color: var(--accent-deep);
+  box-shadow: 0 4px 0 var(--accent-deep), var(--shadow-sm);
+  border: 2px solid var(--accent);
   border-bottom: none;
   border-radius: 999px;
   padding: 14px 28px;
@@ -1141,8 +1141,8 @@ section > p { max-width: 780px; margin-left: auto; margin-right: auto; }
 }
 .btn-ghost-orange:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 0 var(--claude-deep), var(--shadow-md);
-  color: var(--claude-deep);
+  box-shadow: 0 6px 0 var(--accent-deep), var(--shadow-md);
+  color: var(--accent-deep);
 }
 .btn-ghost-orange:active { transform: translateY(0); }
 

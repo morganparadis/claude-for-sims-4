@@ -496,7 +496,7 @@ try:
             phone_affs = list(getattr(sim, "_phone_affordances", ()) or ())
             out(f"sim._phone_affordances: {len(phone_affs)} entries")
 
-            # The key question: is our Claude_PhoneMenu in the runtime list?
+            # Is our Llamafone phone affordance in the runtime list?
             ours_present = False
             seen_categories = {}
             for a in phone_affs:
@@ -504,14 +504,14 @@ try:
                 cat = getattr(a, 'category', None)
                 cat_name = getattr(cat, '__name__', None) if cat else None
                 seen_categories[cat_name] = seen_categories.get(cat_name, 0) + 1
-                if name == "Claude_PhoneMenu":
+                if name in ("Llamafone_Call", "Llamafone_Text", "Llamafone_Settings"):
                     ours_present = True
                     out(f"  [OURS] {name}  category={cat_name}  "
                         f"target={getattr(a, 'target_type', None)}  "
                         f"appropriateness={getattr(a, 'appropriateness_tags', None)}  "
                         f"icat={getattr(a, 'interaction_category_tags', None)}")
 
-            out(f"Claude_PhoneMenu PRESENT in live list: {ours_present}")
+            out(f"Llamafone phone affordances PRESENT in live list: {ours_present}")
             out(f"unique categories ({len(seen_categories)}): {sorted(seen_categories.items(), key=lambda x: -x[1])[:20]}")
 
             # Dump all entries so we can compare ours to what works
@@ -621,7 +621,7 @@ try:
     def cmd_dump_prompt(first_name: str = None, last_name: str = None, _connection=None):
         """Build a text prompt as if the named sim were texting the active sim,
         but DON'T send it. Just write it to a file so we can inspect what
-        Claude would see."""
+        the AI would see."""
         output = sims4.commands.CheatOutput(_connection)
         if not first_name:
             output("[Llamafone] Usage: llama.dumpprompt <First> <Last>")

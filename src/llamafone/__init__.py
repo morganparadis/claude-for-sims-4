@@ -15,7 +15,7 @@ Commands (open cheat console with Ctrl+Shift+C):
 """
 
 MOD_NAME = "Llamafone"
-MOD_VERSION = "3.0.1"
+MOD_VERSION = "3.0.2"
 
 
 def _log(message):

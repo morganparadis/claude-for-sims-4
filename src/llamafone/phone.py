@@ -2295,8 +2295,14 @@ def _format_conversation_history(history, main_name, other_name):
     return "\n".join(lines)
 
 
-def _start_conversation(contact, first_message, recipient_sim=None):
-    """Store a new conversation, keyed by recipient sim_id."""
+def _start_conversation(contact, first_message, recipient_sim=None, kind="text"):
+    """Store a new conversation, keyed by recipient sim_id.
+
+    `kind` is "call" or "text" -- generate_reply() uses it to decide
+    whether to apply the artificial "sim is thinking" reply_delay. Texts
+    feel weirder when they appear instantly, so they get the delay;
+    calls are a live conversation, so they should hit the popup as
+    soon as the AI returns."""
     global _last_active_recipient_id
     if recipient_sim is None or not getattr(recipient_sim, "sim_id", None):
         # No recipient — fall back to a sentinel key so this still works (e.g. send_text)
@@ -2306,6 +2312,7 @@ def _start_conversation(contact, first_message, recipient_sim=None):
     _conversations[rid] = {
         "contact": contact,
         "recipient": recipient_sim,
+        "kind": kind,
         "history": [{"role": "them", "text": first_message}],
     }
     _last_active_recipient_id = rid
@@ -2415,7 +2422,7 @@ def generate_call(callback=None, output=None):
         title = f"Call from {contact['name']}"
         if text:
             text = _apply_mood_from_text(text, recipient=recipient, is_incoming=True)
-            _start_conversation(contact, text, recipient_sim=recipient)
+            _start_conversation(contact, text, recipient_sim=recipient, kind="call")
             journal.add_entry("call", f"Call from {contact['name']} (to {recipient_name}):\n{text}", sim_name=contact["name"], recipient_name=recipient_name)
             caller_si = contact.get("sim_info")
             shown = False
@@ -2583,12 +2590,17 @@ def generate_reply(player_message, callback=None, output=None):
             return
 
         text_clean = _apply_mood_from_text(text, recipient=recipient, is_incoming=False)
-        delay = _calculate_reply_delay(contact)
+        # Calls are a live two-way conversation -- the recipient is on the
+        # other end of the line, so the reply should land the instant the
+        # AI returns. Texts get the artificial "sim is thinking" delay so
+        # they feel asynchronous and natural.
+        kind = conversation.get("kind", "text")
+        delay = 0 if kind == "call" else _calculate_reply_delay(contact)
 
         def _show_reply():
             history.append({"role": "them", "text": text_clean})
             journal.add_entry(
-                "text",
+                kind,
                 f"Conversation with {other_name}:\n"
                 f"{main_name}: {player_message}\n"
                 f"{other_name}: {text_clean}",
@@ -2599,7 +2611,10 @@ def generate_reply(player_message, callback=None, output=None):
             sender_si = contact.get("sim_info")
             shown = False
             if sender_si:
-                shown = _show_phone_dialog(sender_si, title, text_clean, ring=False, recipient_sim_info=recipient)
+                # Calls ring; texts buzz quietly. Mirrors how the original
+                # incoming-call vs incoming-text dialogs feel.
+                ring = (kind == "call")
+                shown = _show_phone_dialog(sender_si, title, text_clean, ring=ring, recipient_sim_info=recipient)
             if not shown:
                 notifications.show(title, text_clean, output=output)
             if callback:
@@ -2718,7 +2733,7 @@ def send_call(contact, player_topic, callback=None, output=None):
     main_name = main_si.first_name if main_si else "your Sim"
     other_name = contact["name"]
 
-    _start_conversation(contact, "", recipient_sim=main_si)
+    _start_conversation(contact, "", recipient_sim=main_si, kind="call")
     rid = main_si.sim_id if (main_si and getattr(main_si, "sim_id", None)) else 0
     _conversations[rid]["history"] = [{"role": "you", "text": player_topic}]
 

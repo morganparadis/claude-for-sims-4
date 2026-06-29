@@ -11,7 +11,7 @@ Config options (in llamafone.cfg):
   auto_events_enabled        = true / false
   auto_event_interval_minutes = 20        (real-world minutes between checks)
   auto_event_chance           = 40        (percent chance each check fires something)
-  auto_event_types            = event,goals  (comma-separated: event, goals, story, drama)
+  auto_event_types            = call,text   (comma-separated: call, text, event, goals, story, drama)
 """
 
 import os
@@ -73,15 +73,19 @@ def get_chance():
     return config.get_config().getint(config._SECTION, "auto_event_chance", fallback=40)
 
 def get_event_types():
-    raw = config.get_config().get(config._SECTION, "auto_event_types", fallback="event,goals")
+    # Default to phone-only -- the mod is built around the phone, so
+    # auto-events default to incoming calls and texts. Players who want
+    # the full mix (events, goals, stories, drama) can override in cfg.
+    raw = config.get_config().get(config._SECTION, "auto_event_types", fallback="call,text")
     return [t.strip().lower() for t in raw.split(",") if t.strip()]
 
 def get_event_weights():
     """
     Read per-type weights from config. Format: event:30, call:40, text:20, goals:10
-    If no weights are configured, all types get equal weight.
+    Default favors phone-first behavior (call:50, text:50) -- matches
+    the mod's positioning as a phone mod, not an AI-everywhere mod.
     """
-    raw = config.get_config().get(config._SECTION, "auto_event_weights", fallback="")
+    raw = config.get_config().get(config._SECTION, "auto_event_weights", fallback="call:50,text:50")
     weights = {}
     if raw.strip():
         for part in raw.split(","):

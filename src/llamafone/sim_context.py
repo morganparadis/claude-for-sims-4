@@ -490,37 +490,77 @@ def get_sim_skills(sim_info, min_level=1, limit=12):
     """
     Return a dict of {skill_name: level} for skills the sim has learned.
     Only includes skills at or above min_level. Sorted highest first.
+
+    Tries several tracker attributes AND several accessor methods because
+    the SkillTracker's runtime API varies by patch and by whether the
+    sim is in the active household (lazy hydration). Also filters to
+    classes whose name contains "Skill" so we don't accidentally include
+    commodity/motive stats if we land on the statistic_tracker.
     """
     skills = {}
-    try:
-        tracker = sim_info.skill_tracker
-        if not tracker:
-            return skills
-        # Try multiple ways to iterate skills
-        stat_items = None
+
+    # Collect every plausible tracker on the sim. skill_tracker is the
+    # canonical one; statistic_tracker can contain skill stats on some
+    # builds; the underscore variants are internal lazy slots.
+    candidate_trackers = []
+    for attr_name in ("skill_tracker", "statistic_tracker",
+                      "_skill_tracker", "_statistic_tracker"):
+        try:
+            tracker = getattr(sim_info, attr_name, None)
+            if tracker is not None:
+                candidate_trackers.append(tracker)
+        except Exception:
+            continue
+
+    if not candidate_trackers:
+        return skills
+
+    def _iter_stats(tracker):
+        # Try the public generator first (most stable across patches),
+        # then fall back to several attribute/method names.
         for accessor in (
-            lambda: tracker._statistics.values(),
-            lambda: tracker.statistics.values(),
-            lambda: tracker._all_skills(),
-            lambda: tracker.all_skills(),
+            lambda: list(tracker.get_all_statistics_gen()),
+            lambda: list(tracker.get_all_skills_gen()),
+            lambda: list(tracker._statistics.values()),
+            lambda: list(tracker.statistics.values()),
+            lambda: list(tracker.get_all_skills()),
+            lambda: list(tracker._all_skills()),
+            lambda: list(tracker.all_skills()),
         ):
             try:
-                stat_items = list(accessor())
-                if stat_items:
-                    break
+                items = accessor()
+                if items:
+                    return items
             except Exception:
                 continue
+        return []
 
-        if not stat_items:
-            return skills
-
+    for tracker in candidate_trackers:
+        stat_items = _iter_stats(tracker)
         for stat_inst in stat_items:
             try:
+                cls_name = type(stat_inst).__name__
+                # Strict: real skills are class-named "Skill_*". Anything
+                # else (Statistic_*, Statistic_Skill_*, Commodity_*, etc.)
+                # is either a motive, a tracking commodity, or some other
+                # non-skill stat that just happens to have "Skill" in its
+                # name. Reject anything that doesn't START with "Skill_".
+                if not cls_name.startswith("Skill_"):
+                    continue
+                # Hidden internal skills (e.g. Skill_Hidden_*) clutter
+                # the prompt without being interesting -- skip them.
+                if "Hidden" in cls_name:
+                    continue
+                # Minor skills (Chopsticks, Spicy Food, Foosball, Juicekeg
+                # Tapping, Bowling, etc.) are fun trivia but tend to crowd
+                # out the real skills (Cooking, Painting, Logic). Filter
+                # them so "top skills" surfaces things worth chatting about.
+                if "Minor" in cls_name:
+                    continue
                 level = int(stat_inst.get_value())
                 if level < min_level:
                     continue
-                name = type(stat_inst).__name__
-                cleaned = (name
+                cleaned = (cls_name
                     .replace("Skill_Adult_", "")
                     .replace("Skill_Child_", "")
                     .replace("Skill_Toddler_", "")
@@ -528,13 +568,16 @@ def get_sim_skills(sim_info, min_level=1, limit=12):
                     .replace("Skill_", "")
                     .replace("_", " ")
                     .title())
-                skills[cleaned] = level
+                # Keep the highest level if we see the same skill twice
+                # (could happen if two trackers expose it).
+                if cleaned not in skills or skills[cleaned] < level:
+                    skills[cleaned] = level
             except Exception:
                 continue
-    except Exception:
-        pass
-    sorted_skills = dict(sorted(skills.items(), key=lambda x: -x[1])[:limit])
-    return sorted_skills
+        if skills:
+            break  # found a tracker that worked; don't double-up
+
+    return dict(sorted(skills.items(), key=lambda x: -x[1])[:limit])
 
 
 def get_sim_relationships(sim_info, limit=8):

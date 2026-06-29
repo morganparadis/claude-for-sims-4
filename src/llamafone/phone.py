@@ -274,6 +274,14 @@ Look at the caller's world vs the player's world (both listed in the context).
   the player. Long-distance is the default — frame everything as a phone call, text, video \
   chat, or a PLANNED future visit ("when I come visit next month"). Same rule applies to \
   mentions of mutual contacts: only "ran into X" if X lives in the CALLER's world.
+- HOUSEHOLD / CLOSE RELATIONSHIPS: if the caller lives in the same household as the player \
+  (spouse, partner, parent/child, sibling all in the same household), or is the player's \
+  romantic partner regardless of address, they NEVER "run into" the player by chance. \
+  They see each other every day. Frame their messages as scheduled: planning the evening, \
+  asking what they want for dinner, coordinating pickup, telling them something that just \
+  happened. Same rule for mentions of mutual sims: don't say "ran into your dad" if your \
+  dad is your husband — you're married to him. Cohabiting sims share a life, not a \
+  coincidental encounter.
 
 # Sims 4 time
 Sims 4 runs much faster than real life. By default ONE in-game week equals \
@@ -291,9 +299,13 @@ the week count.
   "things got weird between us", "things have been weird", "things are weird between us", \
   "after what happened", "we left things off badly", "I know it's been weird", \
   "been meaning to catch up", "we should catch up properly", "we need to catch up", \
-  "do a video call sometime", "let's catch up sometime". \
+  "do a video call sometime", "let's catch up sometime", \
+  "it's been forever", "it's been ages", "it's been so long", "long time no talk", \
+  "long time no see", "it feels like forever since we talked", "we haven't talked in a \
+  while", "it's been a minute". \
   If you find yourself reaching for any of these, you're writing filler — start over with \
-  a concrete topic instead.
+  a concrete topic instead. Open with the actual reason for the call/text, not a \
+  meta-comment on how long it's been.
 - Family relationships are NEVER romantic, regardless of romance score.
 - No profanity or explicit content.
 - Only name sims listed in the mutual contacts block. For others, use a role like \
@@ -319,7 +331,13 @@ the week count.
   hosting, what's planned, where it is. If the block names an honoree ("in memory of \
   X", "for X and Y") use that exact framing; if it doesn't, stay vague ("the funeral \
   later", "the wedding next week") and do NOT guess whose it is from other context \
-  like which mutual sim is deceased.
+  like which mutual sim is deceased. \
+  CRITICAL: calendar events are KNOWN to both sims — you live in the same world and \
+  see the same calendar. NEVER deliver them as breaking news ("just heard X is coming \
+  up", "did you know it's almost X"). Reference them as already-known: "you doing \
+  anything for the holiday?", "you back in time for the wedding?", "see you at the \
+  funeral later". Holidays and season changes especially are obviously known — \
+  nobody "just hears" Summer is starting in 4 days.
 
 # Output format (STRICT)
 PLAIN TEXT ONLY. No markdown. No `**bold**`, no `*italics*`, no `_emphasis_`, no headings, \
@@ -441,6 +459,11 @@ Look at the sender's world vs the player's world (both listed in the context).
   "let's hang out"). NEVER claim to have "run into" the player. Frame everything as long- \
   distance — texts, video chats, social media, or a PLANNED future visit. Same rule for \
   mentions of mutuals: only "ran into X" if X lives in the SENDER's world.
+- HOUSEHOLD / CLOSE RELATIONSHIPS: cohabiting sims (same household) and romantic partners \
+  NEVER "run into" each other or "bump into" each other — they live shared lives. Frame \
+  their texts as coordinating the day, asking what's for dinner, reacting to something \
+  that just happened, or planning what to do next. Same rule for mutuals: a wife doesn't \
+  "run into" her own husband.
 
 # Sims 4 time
 Sims 4 runs much faster than real life. By default ONE in-game week equals \
@@ -485,7 +508,13 @@ the week count.
   hosting, what's planned, where it is. If the block names an honoree ("in memory of \
   X", "for X and Y") use that exact framing; if it doesn't, stay vague ("the funeral \
   later", "the wedding next week") and do NOT guess whose it is from other context \
-  like which mutual sim is deceased.
+  like which mutual sim is deceased. \
+  CRITICAL: calendar events are KNOWN to both sims — you live in the same world and \
+  see the same calendar. NEVER deliver them as breaking news ("just heard X is coming \
+  up", "did you know it's almost X"). Reference them as already-known: "you doing \
+  anything for the holiday?", "you back in time for the wedding?", "see you at the \
+  funeral later". Holidays and season changes especially are obviously known — \
+  nobody "just hears" Summer is starting in 4 days.
 
 # Output format (STRICT)
 PLAIN TEXT ONLY. No markdown. No `**bold**`, no `*italics*`, no `_emphasis_`, no headings, \
@@ -1239,7 +1268,7 @@ def _describe_recipient(recipient_sim, contact=None):
     try:
         skills = sim_context.get_sim_skills(recipient_sim, limit=3)
         if skills:
-            skill_str = ", ".join(f"{name} {lvl}" for name, lvl in skills.items())
+            skill_str = ", ".join(f"{sk} {lvl}" for sk, lvl in skills.items())
             parts.append(f"{recipient_sim.first_name}'s top skills: {skill_str}")
     except Exception:
         pass
@@ -1510,6 +1539,14 @@ def _format_mutual_block(mutuals, casual=True):
         "to family about other family. First-name references are fine for non-family "
         "mutuals."
     )
+    body += (
+        "\nPLAUSIBILITY CHECK -- before involving a mutual in your topic, look at "
+        "their age, career, and traits. A Young Adult Entertainer isn't co-researching "
+        "archaeology with you; a Loner Bookworm Elder isn't your nightclub buddy; a "
+        "Toddler isn't sharing investment tips. Only invoke a mutual as participating "
+        "in something they'd plausibly do given who they are. If they don't fit your "
+        "topic, just don't mention them -- pick a different mutual or skip the gossip."
+    )
     return body
 
 
@@ -1601,7 +1638,11 @@ def _get_mutual_contacts(contact, recipient=None):
                 if not other_label:
                     other_label = "acquaintance"
 
-                # Age and world context
+                # Age, career, and traits -- the AI needs these to reason
+                # about whether the mutual would PLAUSIBLY be involved in a
+                # given topic. A Young Adult Entertainer doesn't suddenly
+                # take up archaeology research; a Loner Bookworm Elder
+                # probably isn't your nightclub buddy.
                 age = ""
                 try:
                     age_str = str(getattr(si, "age", "")).replace("Age.", "")
@@ -1609,6 +1650,23 @@ def _get_mutual_contacts(contact, recipient=None):
                         age = f", {age_str}"
                 except Exception:
                     pass
+
+                career_part = ""
+                try:
+                    career = sim_context.get_sim_career(si)
+                    if career:
+                        career_part = f", {career}"
+                except Exception:
+                    pass
+
+                traits_part = ""
+                try:
+                    traits = sim_context.get_sim_traits(si, limit=2)
+                    if traits:
+                        traits_part = f", {', '.join(traits)}"
+                except Exception:
+                    pass
+
                 world = _get_sim_home_world(si)
                 world_part = f", lives in {world}" if world else ", world unknown — treat as long-distance only"
 
@@ -1622,7 +1680,8 @@ def _get_mutual_contacts(contact, recipient=None):
                 # side is named explicitly to avoid pronoun confusion.
                 recipient_first = main_si.first_name if main_si else "the recipient"
                 mutuals.append(
-                    f"{name} (your {other_label}, {recipient_first}'s {main_label}{age}{world_part}){ghost_tag}"
+                    f"{name} (your {other_label}, {recipient_first}'s {main_label}{age}"
+                    f"{career_part}{traits_part}{world_part}){ghost_tag}"
                 )
             except Exception:
                 continue

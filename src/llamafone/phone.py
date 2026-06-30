@@ -273,7 +273,28 @@ Look at the caller's world vs the player's world (both listed in the context).
   "let's hang out", "let's grab drinks"). NEVER claim to have "run into" or "bumped into" \
   the player. Long-distance is the default — frame everything as a phone call, text, video \
   chat, or a PLANNED future visit ("when I come visit next month"). Same rule applies to \
-  mentions of mutual contacts: only "ran into X" if X lives in the CALLER's world.
+  mentions of mutual contacts: only "ran into X" / "saw X" / "bumped into X" / \
+  "got talking with X" if X's listed world matches the CALLER's world EXACTLY. \
+  Each mutual entry includes "lives in <world>" -- check that string against \
+  the caller's world before claiming any in-person encounter. If they don't \
+  match, no in-person encounter happened; only phone/text/online contact, or \
+  a recent visit you can explicitly justify ("when I was in Sulani last week").
+- HOUSEHOLD / CLOSE RELATIONSHIPS: if the caller lives in the same household as the player \
+  (spouse, partner, parent/child, sibling all in the same household), or is the player's \
+  romantic partner regardless of address, they NEVER "run into" the player by chance. \
+  They see each other every day. Frame their messages as scheduled: planning the evening, \
+  asking what they want for dinner, coordinating pickup, telling them something that just \
+  happened. Same rule for mentions of mutual sims: don't say "ran into your dad" if your \
+  dad is your husband — you're married to him. Cohabiting sims share a life, not a \
+  coincidental encounter.
+- "WHEN YOU'RE BACK" / "when you get home" / "when you return" / "when you're in town" \
+  framing ONLY makes sense if a [CURRENT LOCATION: ...] tag is present saying the \
+  recipient is traveling away from home. And "back" / "home" means BACK TO THEIR OWN \
+  HOME WORLD, never back to the caller's world. The recipient is not "returning" or \
+  "coming back" to wherever the caller is unless they share a home world. If there's \
+  no [CURRENT LOCATION] tag, the recipient is already at home -- don't use return- \
+  framing at all. If there IS a [CURRENT LOCATION] tag and you and the recipient are \
+  in different home worlds, you're still not the destination they're returning to.
 
 # Sims 4 time
 Sims 4 runs much faster than real life. By default ONE in-game week equals \
@@ -291,9 +312,13 @@ the week count.
   "things got weird between us", "things have been weird", "things are weird between us", \
   "after what happened", "we left things off badly", "I know it's been weird", \
   "been meaning to catch up", "we should catch up properly", "we need to catch up", \
-  "do a video call sometime", "let's catch up sometime". \
+  "do a video call sometime", "let's catch up sometime", \
+  "it's been forever", "it's been ages", "it's been so long", "long time no talk", \
+  "long time no see", "it feels like forever since we talked", "we haven't talked in a \
+  while", "it's been a minute". \
   If you find yourself reaching for any of these, you're writing filler — start over with \
-  a concrete topic instead.
+  a concrete topic instead. Open with the actual reason for the call/text, not a \
+  meta-comment on how long it's been.
 - Family relationships are NEVER romantic, regardless of romance score.
 - No profanity or explicit content.
 - Only name sims listed in the mutual contacts block. For others, use a role like \
@@ -319,7 +344,30 @@ the week count.
   hosting, what's planned, where it is. If the block names an honoree ("in memory of \
   X", "for X and Y") use that exact framing; if it doesn't, stay vague ("the funeral \
   later", "the wedding next week") and do NOT guess whose it is from other context \
-  like which mutual sim is deceased.
+  like which mutual sim is deceased. \
+  CRITICAL: calendar events are KNOWN to both sims — you live in the same world and \
+  see the same calendar. NEVER deliver them as breaking news ("just heard X is coming \
+  up", "did you know it's almost X"). Reference them as already-known: "you doing \
+  anything for the holiday?", "you back in time for the wedding?", "see you at the \
+  funeral later". Holidays and season changes especially are obviously known — \
+  nobody "just hears" Summer is starting in 4 days.
+- ASPIRATIONS are background context, NOT names sims would say out loud. The \
+  aspiration string ("Renaissance Sim", "Track Knowledge", "Bestselling Author", \
+  "Friend of the Animals", etc.) is a game-tuning label that real people would never \
+  use in conversation. NEVER say "the [aspiration name] aspiration", "your [aspiration \
+  name] aspiration", "working on Track Knowledge", "doing my Bestselling Author thing". \
+  Instead, talk around it in natural language about the underlying goal -- "the book \
+  you're working on", "your research", "how the studying is going", "your music \
+  project", "the gardening business you're building". The aspiration tells you WHAT \
+  the sim cares about; translate it into how a person would actually describe their \
+  goals. Same goes for the CALLER's own aspiration -- never name-drop it as a label.
+- MUTUAL PLAUSIBILITY -- if you're tempted to ask the recipient whether a mutual would \
+  be into your topic ("would Francesca want to look at this?", "is this too far out of \
+  her wheelhouse?", "do you think Apollo would care about...?"), that's a tell that \
+  the mutual does NOT plausibly fit the topic and you know it. In that case, just \
+  don't bring them up at all -- pick a mutual whose traits/career/age actually fit, \
+  or skip the gossip and stay on your own topic. Never advertise the bad fit by \
+  hedging in front of the recipient.
 
 # Output format (STRICT)
 PLAIN TEXT ONLY. No markdown. No `**bold**`, no `*italics*`, no `_emphasis_`, no headings, \
@@ -440,7 +488,15 @@ Look at the sender's world vs the player's world (both listed in the context).
 - DIFFERENT worlds: NEVER suggest casual in-person meetups ("come over", "stop by", \
   "let's hang out"). NEVER claim to have "run into" the player. Frame everything as long- \
   distance — texts, video chats, social media, or a PLANNED future visit. Same rule for \
-  mentions of mutuals: only "ran into X" if X lives in the SENDER's world.
+  mentions of mutuals: only "ran into X" / "saw X" / "bumped into X" if X's \
+  listed world matches the SENDER's world EXACTLY. Each mutual entry includes \
+  "lives in <world>" -- check that against the sender's world before claiming \
+  any in-person encounter with the mutual.
+- HOUSEHOLD / CLOSE RELATIONSHIPS: cohabiting sims (same household) and romantic partners \
+  NEVER "run into" each other or "bump into" each other — they live shared lives. Frame \
+  their texts as coordinating the day, asking what's for dinner, reacting to something \
+  that just happened, or planning what to do next. Same rule for mutuals: a wife doesn't \
+  "run into" her own husband.
 
 # Sims 4 time
 Sims 4 runs much faster than real life. By default ONE in-game week equals \
@@ -485,7 +541,30 @@ the week count.
   hosting, what's planned, where it is. If the block names an honoree ("in memory of \
   X", "for X and Y") use that exact framing; if it doesn't, stay vague ("the funeral \
   later", "the wedding next week") and do NOT guess whose it is from other context \
-  like which mutual sim is deceased.
+  like which mutual sim is deceased. \
+  CRITICAL: calendar events are KNOWN to both sims — you live in the same world and \
+  see the same calendar. NEVER deliver them as breaking news ("just heard X is coming \
+  up", "did you know it's almost X"). Reference them as already-known: "you doing \
+  anything for the holiday?", "you back in time for the wedding?", "see you at the \
+  funeral later". Holidays and season changes especially are obviously known — \
+  nobody "just hears" Summer is starting in 4 days.
+- ASPIRATIONS are background context, NOT names sims would say out loud. The \
+  aspiration string ("Renaissance Sim", "Track Knowledge", "Bestselling Author", \
+  "Friend of the Animals", etc.) is a game-tuning label that real people would never \
+  use in conversation. NEVER say "the [aspiration name] aspiration", "your [aspiration \
+  name] aspiration", "working on Track Knowledge", "doing my Bestselling Author thing". \
+  Instead, talk around it in natural language about the underlying goal -- "the book \
+  you're working on", "your research", "how the studying is going", "your music \
+  project", "the gardening business you're building". The aspiration tells you WHAT \
+  the sim cares about; translate it into how a person would actually describe their \
+  goals. Same goes for the CALLER's own aspiration -- never name-drop it as a label.
+- MUTUAL PLAUSIBILITY -- if you're tempted to ask the recipient whether a mutual would \
+  be into your topic ("would Francesca want to look at this?", "is this too far out of \
+  her wheelhouse?", "do you think Apollo would care about...?"), that's a tell that \
+  the mutual does NOT plausibly fit the topic and you know it. In that case, just \
+  don't bring them up at all -- pick a mutual whose traits/career/age actually fit, \
+  or skip the gossip and stay on your own topic. Never advertise the bad fit by \
+  hedging in front of the recipient.
 
 # Output format (STRICT)
 PLAIN TEXT ONLY. No markdown. No `**bold**`, no `*italics*`, no `_emphasis_`, no headings, \
@@ -1209,6 +1288,41 @@ def _describe_recipient(recipient_sim, contact=None):
     if traits:
         parts.append(f"{recipient_sim.first_name}'s traits: {', '.join(traits)}")
 
+    # Recipient's current mood, career, aspiration -- the caller block has
+    # these too, and the AI needs them on the recipient side so it can ask
+    # about real things ("how's the doctor track going?", "still going for
+    # Renaissance Sim?"). Mood was a regression from earlier versions.
+    try:
+        mood = sim_context.get_sim_mood(recipient_sim)
+        if mood:
+            parts.append(f"{recipient_sim.first_name}'s current mood: {mood}")
+    except Exception:
+        pass
+
+    try:
+        career = sim_context.get_sim_career(recipient_sim)
+        if career:
+            parts.append(f"{recipient_sim.first_name}'s career: {career}")
+    except Exception:
+        pass
+
+    try:
+        aspiration = sim_context.get_sim_aspiration(recipient_sim)
+        if aspiration:
+            parts.append(f"{recipient_sim.first_name}'s aspiration: {aspiration}")
+    except Exception:
+        pass
+
+    # Top 3 skills -- enables save-aware callbacks like "how's the painting
+    # going?" when the player has actually been raising Painting.
+    try:
+        skills = sim_context.get_sim_skills(recipient_sim, limit=3)
+        if skills:
+            skill_str = ", ".join(f"{sk} {lvl}" for sk, lvl in skills.items())
+            parts.append(f"{recipient_sim.first_name}'s top skills: {skill_str}")
+    except Exception:
+        pass
+
     # Recipient's world -- the sender already gets this, and skipping it on
     # the recipient leaves the model guessing whether they live in the same
     # place or somewhere else, which produces phrases like "ran into your
@@ -1475,6 +1589,14 @@ def _format_mutual_block(mutuals, casual=True):
         "to family about other family. First-name references are fine for non-family "
         "mutuals."
     )
+    body += (
+        "\nPLAUSIBILITY CHECK -- before involving a mutual in your topic, look at "
+        "their age, career, and traits. A Young Adult Entertainer isn't co-researching "
+        "archaeology with you; a Loner Bookworm Elder isn't your nightclub buddy; a "
+        "Toddler isn't sharing investment tips. Only invoke a mutual as participating "
+        "in something they'd plausibly do given who they are. If they don't fit your "
+        "topic, just don't mention them -- pick a different mutual or skip the gossip."
+    )
     return body
 
 
@@ -1566,7 +1688,11 @@ def _get_mutual_contacts(contact, recipient=None):
                 if not other_label:
                     other_label = "acquaintance"
 
-                # Age and world context
+                # Age, career, and traits -- the AI needs these to reason
+                # about whether the mutual would PLAUSIBLY be involved in a
+                # given topic. A Young Adult Entertainer doesn't suddenly
+                # take up archaeology research; a Loner Bookworm Elder
+                # probably isn't your nightclub buddy.
                 age = ""
                 try:
                     age_str = str(getattr(si, "age", "")).replace("Age.", "")
@@ -1574,6 +1700,23 @@ def _get_mutual_contacts(contact, recipient=None):
                         age = f", {age_str}"
                 except Exception:
                     pass
+
+                career_part = ""
+                try:
+                    career = sim_context.get_sim_career(si)
+                    if career:
+                        career_part = f", {career}"
+                except Exception:
+                    pass
+
+                traits_part = ""
+                try:
+                    traits = sim_context.get_sim_traits(si, limit=2)
+                    if traits:
+                        traits_part = f", {', '.join(traits)}"
+                except Exception:
+                    pass
+
                 world = _get_sim_home_world(si)
                 world_part = f", lives in {world}" if world else ", world unknown — treat as long-distance only"
 
@@ -1587,7 +1730,8 @@ def _get_mutual_contacts(contact, recipient=None):
                 # side is named explicitly to avoid pronoun confusion.
                 recipient_first = main_si.first_name if main_si else "the recipient"
                 mutuals.append(
-                    f"{name} (your {other_label}, {recipient_first}'s {main_label}{age}{world_part}){ghost_tag}"
+                    f"{name} (your {other_label}, {recipient_first}'s {main_label}{age}"
+                    f"{career_part}{traits_part}{world_part}){ghost_tag}"
                 )
             except Exception:
                 continue
@@ -2501,6 +2645,14 @@ def _describe_relationship(contact, recipient=None):
         if aspiration:
             parts.append(f"{name}'s aspiration: {aspiration}")
 
+        try:
+            skills = sim_context.get_sim_skills(si, limit=3)
+            if skills:
+                skill_str = ", ".join(f"{sk} {lvl}" for sk, lvl in skills.items())
+                parts.append(f"{name}'s top skills: {skill_str}")
+        except Exception:
+            pass
+
         clubs = sim_context.get_sim_clubs(si)
         if clubs:
             parts.append(f"{name}'s clubs: {', '.join(clubs)}")
@@ -2754,7 +2906,9 @@ def generate_call(callback=None, output=None):
     events_text = events.format_shared_events_for_prompt(recipient, contact.get("sim_info"))
     events_block = f"\n\n{events_text}" if events_text else ""
 
+    from . import LOAD_TIMESTAMP as _LT
     prompt = (
+        f"[llamafone build loaded at {_LT}]\n\n"
         f"Caller info:\n{rel_desc}{history_block}{mutual_block}\n\n"
         f"{recipient_block}{events_block}\n\n"
         f"They are calling {recipient_name}{_location_context(recipient, contact)}.{_season_context()}{_weather_context(recipient, contact)}\n\n"

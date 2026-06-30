@@ -488,53 +488,78 @@ def get_sim_mood(sim_info):
 
 def get_sim_skills(sim_info, min_level=1, limit=12):
     """
-    Return a dict of {skill_name: level} for skills the sim has learned.
+    Return a dict of {skill_name: level} for the sim's leveled-up skills.
     Only includes skills at or above min_level. Sorted highest first.
+
+    Uses sim_info.all_skills() -- the game's own iterator over
+    commodity_tracker filtered to Skill instances. get_user_value()
+    returns the displayed level (1-10 major, 0-5 minor). SimInfo also
+    exposes top_skills(N) but rolling our own gives us label cleaning,
+    minor/hidden filtering, and a defensive code path if the API shifts.
     """
     skills = {}
     try:
-        tracker = sim_info.skill_tracker
-        if not tracker:
+        # Direct API: iterate the sim's actual skill stats.
+        if not hasattr(sim_info, "all_skills"):
             return skills
-        # Try multiple ways to iterate skills
-        stat_items = None
-        for accessor in (
-            lambda: tracker._statistics.values(),
-            lambda: tracker.statistics.values(),
-            lambda: tracker._all_skills(),
-            lambda: tracker.all_skills(),
-        ):
+        for stat_inst in sim_info.all_skills():
             try:
-                stat_items = list(accessor())
-                if stat_items:
-                    break
-            except Exception:
-                continue
-
-        if not stat_items:
-            return skills
-
-        for stat_inst in stat_items:
-            try:
-                level = int(stat_inst.get_value())
+                cls_name = type(stat_inst).__name__
+                # CC-mod skills use a namespace prefix like "TURBODRIVER:" --
+                # skip them entirely. They're not standard game skills and
+                # often surface inappropriate content for family/friend chat.
+                if ":" in cls_name:
+                    continue
+                if "hidden" in cls_name.lower():
+                    continue
+                if "minor" in cls_name.lower():
+                    continue
+                # get_user_value returns the displayed 1-10 level; get_value
+                # returns raw XP, which doesn't match what the game UI shows.
+                if hasattr(stat_inst, "get_user_value"):
+                    level = int(stat_inst.get_user_value())
+                else:
+                    level = int(stat_inst.get_value())
                 if level < min_level:
                     continue
-                name = type(stat_inst).__name__
-                cleaned = (name
-                    .replace("Skill_Adult_", "")
-                    .replace("Skill_Child_", "")
-                    .replace("Skill_Toddler_", "")
-                    .replace("Skill_Teen_", "")
-                    .replace("Skill_", "")
-                    .replace("_", " ")
-                    .title())
-                skills[cleaned] = level
+                # Strip Sims 4's tuning-class prefix words by splitting on
+                # underscores and dropping leading parts that match known
+                # prefixes. More forgiving than a regex anchor -- works
+                # even if there's leading whitespace, different separators,
+                # or unexpected prefix variants.
+                _PREFIX_PARTS = {
+                    "Statistic", "Skill",
+                    "Adult", "Child", "Teen", "Toddler",
+                    "Major", "Minor",
+                    "AdultMajor", "AdultMinor",
+                    "ChildMajor", "ChildMinor",
+                    "TeenMajor", "TeenMinor",
+                    "ToddlerMajor", "ToddlerMinor",
+                }
+                # Sims 4 returns __name__ with SPACES on these stat classes,
+                # not underscores (verified by tracing what reached the
+                # output). Split on whitespace + underscore, then drop
+                # leading prefix-words.
+                # Case-INSENSITIVE prefix match -- actual Sims 4 class names
+                # have lowercase "statistic" (verified by runtime debug),
+                # not capitalized as the tuning files suggest.
+                _PREFIX_LOWER = {p.lower() for p in _PREFIX_PARTS}
+                _parts = cls_name.replace("_", " ").split()
+                while _parts and _parts[0].lower() in _PREFIX_LOWER:
+                    _parts.pop(0)
+                cleaned = " ".join(_parts).strip()
+                # Capitalize each word but preserve internal casing
+                # ("DJ Mixing" stays "DJ Mixing", not "Dj Mixing").
+                cleaned = " ".join(w[:1].upper() + w[1:] if w else w for w in cleaned.split())
+                if not cleaned:
+                    continue
+                if cleaned not in skills or skills[cleaned] < level:
+                    skills[cleaned] = level
             except Exception:
                 continue
     except Exception:
         pass
-    sorted_skills = dict(sorted(skills.items(), key=lambda x: -x[1])[:limit])
-    return sorted_skills
+    return dict(sorted(skills.items(), key=lambda x: -x[1])[:limit])
 
 
 def get_sim_relationships(sim_info, limit=8):
@@ -613,12 +638,38 @@ def get_sim_relationships(sim_info, limit=8):
 
 
 def get_sim_career(sim_info):
-    """Return the sim's career name if employed."""
+    """Return the sim's career name if employed, e.g. "Astronaut" or
+    "Tech Guru" -- with the internal Career_Adult_Active_ prefix
+    stripped. Returns None when the sim has no current career.
+    """
     try:
         career_tracker = sim_info.career_tracker
-        if career_tracker:
-            for career in career_tracker.careers.values():
-                return career.__class__.__name__.replace("_", " ").title()
+        if not career_tracker:
+            return None
+        # careers is a dict career_uid -> TrackedCareer. Iterate the
+        # values defensively in case the dict-API shifts.
+        careers = getattr(career_tracker, "careers", None)
+        if not careers:
+            return None
+        career_iter = careers.values() if hasattr(careers, "values") else careers
+        for career in career_iter:
+            try:
+                raw = career.__class__.__name__
+            except Exception:
+                continue
+            import re as _re
+            # Strip "Career_" + optional age tier (Adult/Teen/Child) +
+            # optional Active/Standard/Part_Time/etc. so we get a clean
+            # human-readable career name.
+            cleaned = _re.sub(
+                r'^Career_(?:(?:Adult|Teen|Child)_?)?(?:Active_|PartTime_|Part_Time_)?',
+                '',
+                raw,
+            ).replace("_", " ").strip()
+            # Preserve internal capitalization on words like "DJ"
+            cleaned = " ".join(w[:1].upper() + w[1:] if w else w for w in cleaned.split())
+            if cleaned:
+                return cleaned
     except Exception:
         pass
     return None

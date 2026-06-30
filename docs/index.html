@@ -108,7 +108,12 @@
       <span class="text-sparkle ts6"></span>AI Calls &amp; Texts for The&nbsp;Sims&nbsp;4</span></h1>
     <p class="tagline">Your sims have things to say. Hand them a phone.</p>
     <div class="cta-row">
-      <a class="btn btn-primary" href="https://github.com/morganparadis/llamafone/releases/latest">Download the mod</a>
+      <div class="cta-download">
+        <a class="btn btn-primary" href="https://github.com/morganparadis/llamafone/releases/latest">Download the mod</a>
+        <p class="download-count" id="download-count" hidden>
+          <span id="download-count-value">…</span> downloads on GitHub
+        </p>
+      </div>
       <a class="btn btn-ghost" href="#features">See what it does</a>
     </div>
     <div class="badges">
@@ -879,6 +884,70 @@ api_key  = </code></pre>
     </div>
   </div>
 </footer>
+
+<script>
+// GitHub download count -- sums asset download_count across every release.
+// Cached for 1 hour in localStorage so repeat visits don't burn the
+// unauthenticated 60-req/hour rate limit. Fails silently if the API is
+// unreachable or returns junk -- the count line just stays hidden.
+(function () {
+  var line = document.getElementById('download-count');
+  var value = document.getElementById('download-count-value');
+  if (!line || !value) return;
+
+  // Bumped to v2 when we started dividing the asset-download total by 3
+  // (releases ship 3 assets and most users grab all). Old v1 caches held
+  // the undivided number, so we ignore them by changing the key.
+  var CACHE_KEY = 'llamafone_dl_count_v2';
+  var CACHE_TIME = 'llamafone_dl_count_at_v2';
+  var ONE_HOUR = 60 * 60 * 1000;
+
+  function show(text) {
+    value.textContent = text;
+    line.hidden = false;
+  }
+
+  try {
+    var cached = localStorage.getItem(CACHE_KEY);
+    var at = parseInt(localStorage.getItem(CACHE_TIME) || '0', 10);
+    if (cached && (Date.now() - at) < ONE_HOUR) {
+      show(cached);
+      return;
+    }
+  } catch (_) { /* localStorage disabled -- carry on */ }
+
+  fetch('https://api.github.com/repos/morganparadis/llamafone/releases?per_page=100')
+    .then(function (r) {
+      if (!r.ok) throw new Error('http ' + r.status);
+      return r.json();
+    })
+    .then(function (releases) {
+      if (!Array.isArray(releases)) throw new Error('not an array');
+      var assetTotal = 0;
+      for (var i = 0; i < releases.length; i++) {
+        var assets = releases[i].assets || [];
+        for (var j = 0; j < assets.length; j++) {
+          assetTotal += (assets[j].download_count || 0);
+        }
+      }
+      // Each release ships 3 assets (.ts4script, .package, and the config
+      // bundle) and most users grab all of them per update -- so the
+      // unique-download count is asset-downloads / 3. Round to nearest
+      // whole number for display.
+      var total = Math.round(assetTotal / 3);
+      if (total <= 0) return;  // don't render "0 downloads"
+      var formatted = total.toLocaleString();
+      show(formatted);
+      try {
+        localStorage.setItem(CACHE_KEY, formatted);
+        localStorage.setItem(CACHE_TIME, Date.now().toString());
+      } catch (_) { /* localStorage disabled -- carry on */ }
+    })
+    .catch(function () {
+      // Quietly stay hidden. Better no badge than a "Loading..." stuck forever.
+    });
+})();
+</script>
 
 </body>
 </html>

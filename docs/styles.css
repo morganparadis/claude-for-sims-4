@@ -412,8 +412,27 @@ kbd {
   display: flex;
   gap: 14px;
   justify-content: center;
+  align-items: flex-start;
   flex-wrap: wrap;
   margin-bottom: 1.75rem;
+}
+
+.cta-download {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.download-count {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-align: center;
+}
+.download-count #download-count-value {
+  font-weight: 700;
+  color: var(--plumbob-dark);
 }
 
 .badges {

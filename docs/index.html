@@ -47,7 +47,7 @@
     "description": "A free phone-first script mod for The Sims 4 that generates AI-powered phone calls and text messages (bring your own AI -- Claude, OpenAI, Gemini, or local Ollama). Random sims call and text you in character, shaped by their traits, mood, relationships, and what's actually happening in your save.",
     "url": "https://morganparadis.github.io/llamafone/",
     "downloadUrl": "https://github.com/morganparadis/llamafone/releases/latest",
-    "softwareVersion": "3.1.0",
+    "softwareVersion": "3.1.1",
     "image": "https://morganparadis.github.io/llamafone/img/llamafonelogo-square.PNG",
     "author": { "@type": "Person", "name": "morganparadis" },
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -639,6 +639,23 @@ api_key  = </code></pre>
   <p class="muted">Recent changes from the dev branch — the mod's actively maintained.</p>
 
   <ol class="changelog-list">
+
+    <li class="changelog-entry">
+      <div class="changelog-date">June 29, 2026</div>
+      <div class="changelog-body">
+        <h3>Smarter context, durable journal (v3.1.1)</h3>
+        <ul>
+          <li><strong>Sims know each other better.</strong> The recipient block now passes the same context the caller block has had for ages — mood, career, aspiration, top-3 skills. The AI can now reference real save state ("how's the doctor track going?", "still going for Renaissance Sim?", "how's the painting coming along?") on both sides of the conversation.</li>
+          <li><strong>Real skills only, cleanly named.</strong> Rewrote the skill lookup to use the game's own <code>sim_info.all_skills()</code> API (verified by reading the decompiled game source). Strips internal naming junk like <code>Statistic_Skill_AdultMajor_</code> so you see <code>Charisma 10</code>, not <code>Statistic Skill AdultMajor Charisma 10</code>. Filters out CC-mod skills (e.g. WickedWhims) and minor/hidden skills so the top-3 surfaces things worth chatting about.</li>
+          <li><strong>Mutuals you call out actually fit your topic.</strong> Each mutual entry now includes career + traits + age, plus a <em>plausibility check</em> rule: a Young Adult Entertainer isn't co-researching archaeology with you, a Loner Bookworm Elder isn't your nightclub buddy. The AI is also explicitly told not to hedge ("would Francesca even be into this?") — that's a tell the mutual doesn't fit and shouldn't be name-dropped at all.</li>
+          <li><strong>Stop "running into" people who live in other worlds.</strong> Tighter geography rules — only "ran into X" if X actually lives in the caller's world. And cohabiting sims / romantic partners NEVER "run into" each other; they live a shared life.</li>
+          <li><strong>"It's been forever" filler banned.</strong> Sims were over-using "it's been forever since we talked", "long time no see", "been a minute" as openers. All variants now banned; the AI has to lead with the actual reason for the call.</li>
+          <li><strong>Aspirations stay in your sim's head.</strong> No more "I've been working on my Track Knowledge aspiration" — aspirations are background context, not labels real sims would say out loud. The AI now references the underlying goal in natural language ("the research I've been doing", "my music project").</li>
+          <li><strong>Bogus "moved out / moved in" milestones fixed.</strong> The old detector compared sim household-id to whichever family the player was currently controlling — so swapping households via Manage Households fired phantom move events for every sim in your save. Now tracks the sim's absolute household identity and only fires on real moves. Old bogus entries are suppressed.</li>
+          <li><strong>Journal: no more silent data loss.</strong> Removed the 150-entry hard cap (the journal now grows unbounded — no more silently dropping history on long-running saves). Atomic writes prevent partial-write corruption. If a journal file ever becomes unreadable, it's renamed to a timestamped <code>.bak</code> BEFORE the cache resets, so no data is ever blindly overwritten. Any failure is logged.</li>
+        </ul>
+      </div>
+    </li>
 
     <li class="changelog-entry">
       <div class="changelog-date">June 29, 2026</div>

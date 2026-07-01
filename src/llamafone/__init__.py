@@ -15,7 +15,7 @@ Commands (open cheat console with Ctrl+Shift+C):
 """
 
 MOD_NAME = "Llamafone"
-MOD_VERSION = "3.1.4"
+MOD_VERSION = "3.2.0"
 
 # Captured at module-load time -- the moment Sims 4 imported this build.
 # Used in prompts so a llama.dumpprompt definitively shows which load
@@ -95,6 +95,8 @@ try:
     from . import commands   # noqa: F401 -- registers all llama.* cheat commands
     from . import auto_events
     from . import save_id
+    from . import interactions
+    from . import past_events
 
     auto_events.start()  # starts only if auto_events_enabled = true in config
 
@@ -104,6 +106,21 @@ try:
     # then load different save). No polling.
     if not save_id.install_save_load_hook():
         _log("save_id.install_save_load_hook: zone class not ready at mod-load; will retry from startup thread")
+
+    # Hook Relationship.add_relationship_bit so we can log in-game
+    # interactions between sims (Just Chatted, Just Kissed, Just Argued,
+    # etc.). The next phone prompt for that pair will surface "they were
+    # together in person since your last conversation". Idempotent.
+    if not interactions.install_hook():
+        _log("interactions.install_hook: Relationship class not importable yet; will retry from startup thread")
+
+    # Hook BaseDramaNode._setup so every calendar event (party, funeral,
+    # wedding, dinner, holiday-you-hosted) registers an on-complete
+    # callback. When the event ends, we record it -- so when the AI
+    # writes a text the next day, it can reference the event you both
+    # attended even after the calendar has dropped it.
+    if not past_events.install_hook():
+        _log("past_events.install_hook: BaseDramaNode not importable yet; will retry from startup thread")
 
     # Wire up phone-UI injection BEFORE object tunings finish loading.
     # The companion .package supplies the interaction tunings (which are
@@ -152,6 +169,18 @@ try:
                 # mod-load (rare -- the zone module is usually imported by
                 # the engine before mods run), install it now.
                 save_id.install_save_load_hook()
+                interactions.install_hook()
+                past_events.install_hook()
+                # Trim stale entries on each fresh load so files don't
+                # grow forever.
+                try:
+                    interactions.cleanup_old()
+                except Exception:
+                    pass
+                try:
+                    past_events.cleanup_old()
+                except Exception:
+                    pass
 
                 from . import notifications, config, milestones
                 _log(f"Game client ready (attempt {attempt + 1}), showing startup notification.")

@@ -9,7 +9,7 @@ Players can reply with llama.reply <message> to continue the conversation.
 import random
 import threading
 
-from . import api_client, sim_context, config, journal, notifications, moodlets, events
+from . import api_client, sim_context, config, journal, notifications, moodlets, events, interactions, past_events
 
 # Conversations keyed by recipient sim_id, so concurrent texts/calls to different
 # household sims don't overwrite each other.
@@ -1809,9 +1809,27 @@ def _get_mutual_contacts(contact, recipient=None):
         import services
         sm = services.sim_info_manager()
 
-        # Randomise so different mutuals surface across calls
-        shared_list = list(shared_ids)
-        random.shuffle(shared_list)
+        # Partition mutuals into "family of the contact" and "everyone else".
+        # Family must always appear -- the AI hallucinates worst when it
+        # doesn't know a contact's own children/spouse/siblings/parents
+        # ("who's Luca?" when Luca is the contact's son). Non-family
+        # mutuals are randomised so variety still surfaces across calls.
+        family_ids = []
+        other_ids = []
+        for sid in shared_ids:
+            try:
+                si_check = sm.get(sid)
+                if si_check is not None and _get_family_relationship(si_check, {}, recipient=other_si):
+                    family_ids.append(sid)
+                else:
+                    other_ids.append(sid)
+            except Exception:
+                other_ids.append(sid)
+        random.shuffle(other_ids)
+        # Family first (all of them), then random fill from the rest.
+        # Cap total at 8 so we don't blow up the prompt on huge families.
+        shared_list = family_ids + other_ids
+        MAX_MUTUALS = 8
 
         def _short_relationship_label(rt, sid):
             """Best-effort relationship label from bits, used when family detection
@@ -1833,7 +1851,7 @@ def _get_mutual_contacts(contact, recipient=None):
             except Exception:
                 return None
 
-        for sid in shared_list[:4]:
+        for sid in shared_list[:MAX_MUTUALS]:
             try:
                 si = sm.get(sid)
                 if not si:
@@ -3082,13 +3100,18 @@ def generate_call(callback=None, output=None):
 
     events_text = events.format_shared_events_for_prompt(recipient, contact.get("sim_info"))
     events_block = f"\n\n{events_text}" if events_text else ""
+    past_events_text = past_events.format_for_prompt(contact_id, recipient_sim_id)
+    past_events_block = f"\n\n{past_events_text}" if past_events_text else ""
+
+    last_conv_iso = journal.last_entry_timestamp_for_pair(contact_id, recipient_sim_id)
+    interaction_tag = interactions.format_for_prompt(contact_id, recipient_sim_id, last_conv_iso=last_conv_iso)
 
     from . import LOAD_TIMESTAMP as _LT
     prompt = (
         f"[llamafone build loaded at {_LT}]\n\n"
         f"Caller info:\n{rel_desc}{history_block}{mutual_block}\n\n"
-        f"{recipient_block}{events_block}\n\n"
-        f"They are calling {recipient_name}{_location_context(recipient, contact)}.{_season_context()}{_weather_context(recipient, contact)}\n\n"
+        f"{recipient_block}{events_block}{past_events_block}\n\n"
+        f"They are calling {recipient_name}{_location_context(recipient, contact)}.{_season_context()}{_weather_context(recipient, contact)}{interaction_tag}\n\n"
         f"Write what {contact['name']} says during this phone call."
     )
 
@@ -3169,11 +3192,16 @@ def generate_text(callback=None, output=None):
 
     events_text = events.format_shared_events_for_prompt(recipient, contact.get("sim_info"))
     events_block = f"\n\n{events_text}" if events_text else ""
+    past_events_text = past_events.format_for_prompt(contact_id, recipient_sim_id)
+    past_events_block = f"\n\n{past_events_text}" if past_events_text else ""
+
+    last_conv_iso = journal.last_entry_timestamp_for_pair(contact_id, recipient_sim_id)
+    interaction_tag = interactions.format_for_prompt(contact_id, recipient_sim_id, last_conv_iso=last_conv_iso)
 
     prompt = (
         f"Sender info:\n{rel_desc}{history_block}{mutual_block}\n\n"
-        f"{recipient_block}{events_block}\n\n"
-        f"They are texting {recipient_name}{_location_context(recipient, contact)}.{_season_context()}{_weather_context(recipient, contact)}\n\n"
+        f"{recipient_block}{events_block}{past_events_block}\n\n"
+        f"They are texting {recipient_name}{_location_context(recipient, contact)}.{_season_context()}{_weather_context(recipient, contact)}{interaction_tag}\n\n"
         f"Write 1-2 short text messages from {contact['name']}."
     )
 
@@ -3266,16 +3294,21 @@ def generate_reply(player_message, callback=None, output=None):
 
     events_text = events.format_shared_events_for_prompt(recipient, contact.get("sim_info"))
     events_block = f"\n\n{events_text}" if events_text else ""
+    past_events_text = past_events.format_for_prompt(contact_id, recipient_sim_id)
+    past_events_block = f"\n\n{past_events_text}" if past_events_text else ""
 
     geo_main = recipient if recipient else sim_context.get_main_sim_info()
+    last_conv_iso = journal.last_entry_timestamp_for_pair(contact_id, main_sim_id)
+    interaction_tag = interactions.format_for_prompt(contact_id, main_sim_id, last_conv_iso=last_conv_iso)
     context_tags = (
         f"{_location_context(geo_main, contact)}"
         f"{_season_context()}"
         f"{_weather_context(geo_main, contact)}"
+        f"{interaction_tag}"
     )
 
     prompt = (
-        f"Relationship info:\n{rel_desc}{history_block}{mutual_block}{events_block}\n\n"
+        f"Relationship info:\n{rel_desc}{history_block}{mutual_block}{events_block}{past_events_block}\n\n"
         f"Conversation so far:\n{convo_text}"
         f"{context_tags}\n\n"
         f"Write {other_name}'s reply (1-3 short text messages)."
@@ -3388,16 +3421,21 @@ def send_text(contact, player_message, callback=None, output=None):
 
     events_text = events.format_shared_events_for_prompt(main_si, contact.get("sim_info"))
     events_block = f"\n\n{events_text}" if events_text else ""
+    past_events_text = past_events.format_for_prompt(contact_id, main_sim_id)
+    past_events_block = f"\n\n{past_events_text}" if past_events_text else ""
 
+    last_conv_iso = journal.last_entry_timestamp_for_pair(contact_id, main_sim_id)
+    interaction_tag = interactions.format_for_prompt(contact_id, main_sim_id, last_conv_iso=last_conv_iso)
     context_tags = (
         f"{_location_context(main_si, contact)}"
         f"{_season_context()}"
         f"{_weather_context(main_si, contact)}"
+        f"{interaction_tag}"
     )
 
     prompt = (
         f"Relationship info:\n{rel_desc}{history_block}{mutual_block}\n\n"
-        f"{recipient_block}{events_block}\n\n"
+        f"{recipient_block}{events_block}{past_events_block}\n\n"
         f"{main_name} just texted {other_name}: \"{player_message}\""
         f"{context_tags}\n\n"
         f"Write {other_name}'s reply (1-3 short text messages). "
@@ -3505,16 +3543,21 @@ def send_call(contact, player_topic, callback=None, output=None):
 
     events_text = events.format_shared_events_for_prompt(main_si, contact.get("sim_info"))
     events_block = f"\n\n{events_text}" if events_text else ""
+    past_events_text = past_events.format_for_prompt(contact_id, main_sim_id)
+    past_events_block = f"\n\n{past_events_text}" if past_events_text else ""
 
+    last_conv_iso = journal.last_entry_timestamp_for_pair(contact_id, main_sim_id)
+    interaction_tag = interactions.format_for_prompt(contact_id, main_sim_id, last_conv_iso=last_conv_iso)
     context_tags = (
         f"{_location_context(main_si, contact)}"
         f"{_season_context()}"
         f"{_weather_context(main_si, contact)}"
+        f"{interaction_tag}"
     )
 
     prompt = (
         f"Person being called:\n{rel_desc}{history_block}{mutual_block}\n\n"
-        f"{recipient_block}{events_block}\n\n"
+        f"{recipient_block}{events_block}{past_events_block}\n\n"
         f"{main_name} is calling {other_name}. {main_name} says: \"{player_topic}\""
         f"{context_tags}\n\n"
         f"Write what {other_name} says in response (3-5 lines of dialogue). "

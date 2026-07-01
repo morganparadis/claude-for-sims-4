@@ -47,7 +47,7 @@
     "description": "A free phone-first script mod for The Sims 4 that generates AI-powered phone calls and text messages (bring your own AI -- Claude, OpenAI, Gemini, or local Ollama). Random sims call and text you in character, shaped by their traits, mood, relationships, and what's actually happening in your save.",
     "url": "https://morganparadis.github.io/llamafone/",
     "downloadUrl": "https://github.com/morganparadis/llamafone/releases/latest",
-    "softwareVersion": "3.2.0",
+    "softwareVersion": "3.3.0",
     "image": "https://morganparadis.github.io/llamafone/img/llamafonelogo-square.PNG",
     "author": { "@type": "Person", "name": "morganparadis" },
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -648,6 +648,20 @@ api_key  = </code></pre>
     <li class="changelog-entry">
       <div class="changelog-date">June 30, 2026</div>
       <div class="changelog-body">
+        <h3>Sims remember the parties (v3.3.0)</h3>
+        <p>Past-event memory is finally working end-to-end, and built-in Sims 4 holidays now surface with their real names. Same per-save data layout as v3.2.0, drop-in.</p>
+        <ul>
+          <li><strong>Sims remember the party you both attended.</strong> Throw a house party, dinner, wedding, funeral, whatever — end it, then text a guest the next sim day. The AI now sees a <code>Recent events you both attended:</code> block in the prompt with the event and how long ago, so they'll open with "great party last night" or "thanks for coming to grandpa's wake" instead of generic small talk. Data lands in <code>PastEvents.json</code> in your save folder as each event ends.</li>
+          <li><strong>The mechanism (for the curious).</strong> Sims 4 aggressively clears attendee data on situation teardown — <code>sim_ids</code>, <code>guest_ids</code>, <code>host_sim_info</code>, and even <code>sit.id</code> all get zeroed before any teardown hook runs. Solved with a background thread that polls every 15 seconds while a party is live: iterates all sims via <code>services.sim_info_manager()</code>, asks <code>SituationManager.get_situations_sim_is_in(sim)</code> which situations each sim is currently in, and stashes both the sim id and the situation id onto the situation as private attributes. Those private attributes survive the teardown clear, so when the situation is destroyed we still have the full attendee list and event id.</li>
+          <li><strong>Love Day and other built-in holidays now show in upcoming events.</strong> Vanilla Sims 4 holidays (Love Day, Winterfest, Harvestfest, New Year's, etc.) have holiday_ids in the low-integer range that Sims 4's <code>holiday_service.get_holiday_display_name()</code> returns empty for. They were silently dropped from the calendar block. Added class-level fallbacks: try <code>display_name</code> tunable first, then a cleaned <code>__name__</code> of the holiday class. Also strips <code>Premade_Holiday_</code> prefix so the name reads as "Love Day" not "Premade Holiday Love Day".</li>
+          <li><strong>Prettier event names in prompts.</strong> <code>Situation_HouseParty</code> now reads as "House Party" in the recent-events block; <code>Situation_DinnerParty_Formal</code> as "Dinner Party Formal", etc. Strips class prefixes and splits CamelCase.</li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="changelog-entry">
+      <div class="changelog-date">June 30, 2026</div>
+      <div class="changelog-body">
         <h3>Sims notice when you actually hang out (v3.2.0)</h3>
         <p>Two new context features. Same per-save data layout as v3.1.4, drop-in.</p>
         <ul>
@@ -754,55 +768,6 @@ api_key  = </code></pre>
       </div>
     </li>
 
-    <li class="changelog-entry">
-      <div class="changelog-date">June 27, 2026</div>
-      <div class="changelog-body">
-        <h3>The mod is in your sim's phone now (v2.0.0)</h3>
-        <ul>
-          <li><strong>Three new items under Phone &gt; Social</strong> — <em>Call Someone</em>, <em>Send Text</em>, <em>Settings</em>. No cheat console for daily use. Picking Call or Text opens a sim picker scoped to your contacts, then a multi-line text area where you type what you want to say; the AI crafts the message in the recipient's voice. Cheat commands still work alongside.</li>
-          <li><strong>Reply button on incoming dialogs opens a text input</strong> instead of dumping a "type <code>llama.reply</code> in the console" hint. You type your reply right there in the popup and the conversation continues.</li>
-          <li><strong>In-game Settings panel</strong> — toggles for auto-events, reply delays, ghost contacts on phone, plus numeric inputs for chance and interval. Changes save instantly to <code>llamafone.cfg</code> (preserving your comments) and apply without reloading the save. Static settings (API key, models, language) still live in the .cfg file.</li>
-          <li><strong>Compositions get more room</strong> — the Call/Text/Reply text inputs are now multi-line text areas instead of single-line boxes, so you can write a paragraph if you want.</li>
-          <li><strong>Cross-platform build script</strong> — auto-install now finds your Mods folder under Steam Proton, Lutris, Heroic, and generic Wine prefixes. End users don't need any of this — releases ship the compiled artifacts.</li>
-        </ul>
-      </div>
-    </li>
-
-    <li class="changelog-entry">
-      <div class="changelog-date">June 26, 2026</div>
-      <div class="changelog-body">
-        <h3>Stops guessing whose funeral it is (v1.2.2)</h3>
-        <ul>
-          <li>Calendar events on the prompt now include the actual focal sims pulled straight from the in-game event data: <code>Funeral — in memory of Sawyer Woodruff</code>, <code>Wedding — for Alex and Bailey</code>, <code>Birthday Party — for Apollo's birthday; hosted by Vivian</code>. The AI no longer infers who an event is about by scanning your family tree for a deceased sim — it reads it off the calendar entry the player actually configured.</li>
-          <li>Hosts are surfaced for any player-planned event (parties, gatherings, dates, holidays you're hosting). Deduped against role-specific entries so the same sim doesn't get listed twice when a wedding host is also one of the betrothed.</li>
-          <li>All three phone system prompts (call, text, reply) now treat calendar events as ground truth — an explicit exception to the "play along with the player" rule. If the events block doesn't name an honoree, the AI is told to stay vague ("the funeral later") rather than guessing from other context.</li>
-        </ul>
-      </div>
-    </li>
-
-    <li class="changelog-entry">
-      <div class="changelog-date">June 26, 2026</div>
-      <div class="changelog-body">
-        <h3>Knows that a Sims week is a season (v1.2.1)</h3>
-        <ul>
-          <li>Sims 4 time runs faster than real life: 1 in-game week = 1 season by default. The mod was telling the AI "Christmas Vacation in 2 weeks" — which reads like a casual fortnight away in human terms but is actually 2 seasons away in sim terms.</li>
-          <li>Now each upcoming-event line includes the season it falls in (<code>Christmas Vacation (in 2 weeks, Winter)</code>), and the system prompt explains the calendar rule so the AI paces references naturally — "next season", "a while away", "soon" — instead of counting weeks.</li>
-        </ul>
-      </div>
-    </li>
-
-    <li class="changelog-entry">
-      <div class="changelog-date">June 25, 2026</div>
-      <div class="changelog-body">
-        <h3>Aware of your calendar and family tree (v1.2)</h3>
-        <ul>
-          <li><strong>Upcoming events in the prompt</strong> — calls and texts now reference real upcoming entries on your sim's calendar that BOTH sims are attending. Funeral in 40 minutes, wedding in 3 days, your custom "Summer" holiday next week. The AI references them naturally ("see you at the funeral later") instead of inventing meetups. Solemn events get a solemn tone hint; weddings and birthdays get a warm one.</li>
-          <li><strong>Family-role references</strong> — when one family member mentions another in a message to you, they use the relationship ("your dad", "your sister") instead of the first name. Vivian texting Francesca about Apollo now says "your dad wants to know if you're free Friday" instead of "apollo wants to know...".</li>
-          <li><strong>Life events surface once per contact</strong> — when something big happens in your save (job quit, promotion, breakup), each contact only brings it up once. Same sim won't keep asking how it's been leaving your job across five calls.</li>
-        </ul>
-      </div>
-    </li>
-
   </ol>
 
   <p class="changelog-footer">
@@ -850,12 +815,6 @@ api_key  = </code></pre>
       <div class="roadmap-status status-planned">Planned</div>
       <h3>Standalone Llamafone phone app</h3>
       <p>A dedicated icon on your sim's phone home screen — tap it and you're in Llamafone, with quick access to calls, texts, conversation history, and settings. No more digging through the Social menu. The Phone &gt; Social tiles will stay too, but the standalone app makes the mod feel native alongside the game's other phone apps.</p>
-    </li>
-
-    <li class="roadmap-card">
-      <div class="roadmap-status status-planned">Planned</div>
-      <h3>Past-event memory</h3>
-      <p>The Sims 4 calendar drops events from the in-game UI the moment they end — so a wedding you attended on Monday is gone from the prompt by Tuesday. The mod will snapshot calendar events as you live through them and surface the recent ones in calls and texts, so sims can text the morning after a party with "good seeing you last night", reference a funeral you both attended last weekend, or follow up on something that happened at the holiday gathering. Memory you keep, even after the game forgets.</p>
     </li>
 
     <li class="roadmap-card">

@@ -283,6 +283,56 @@ def _resolve_holiday_name(event):
                 _log(f"holiday_name: hid={hid} -> '{fallback_clean}' via data._name")
                 return fallback_clean
 
+        # Built-in Sims 4 holidays (Love Day, Winterfest, Harvestfest,
+        # etc) come back as HashedTunedInstanceMetaclass -- literally the
+        # Holiday class itself, not a data instance. Two class-level
+        # sources for the name:
+        #   1. `data.display_name` -- TunableLocalizedStringFactory; if
+        #      resolvable it's the localized human-readable name.
+        #   2. `data.__name__` -- the raw class name (e.g. "Holiday_LoveDay"),
+        #      cleaned into spaced English. Ugly but never wrong.
+        try:
+            disp = getattr(data, "display_name", None)
+            if disp is not None:
+                # Some are factories (call to get a LocalizedString), some
+                # are LocalizedStrings directly. Try both.
+                loc_val = None
+                try:
+                    if callable(disp):
+                        loc_val = disp()
+                    else:
+                        loc_val = disp
+                except Exception:
+                    loc_val = disp
+                if loc_val is not None:
+                    try:
+                        resolved_disp = sim_context._resolve_localized_string(loc_val)
+                    except Exception:
+                        resolved_disp = None
+                    disp_clean = _clean_event_name(resolved_disp or "") if resolved_disp else ""
+                    if disp_clean and disp_clean.lower() not in ("custom holiday", "holiday"):
+                        _log(f"holiday_name: hid={hid} -> '{disp_clean}' via class.display_name")
+                        return disp_clean
+        except Exception as e:
+            _log(f"holiday_name: hid={hid} class.display_name lookup raised: {type(e).__name__}: {e}")
+
+        try:
+            cls_name = getattr(data, "__name__", "") or ""
+            if cls_name:
+                # Strip common prefixes -- game classes are like
+                # "Holiday_LoveDay" or "Premade_Holiday_Surprise_PirateDay".
+                stripped = cls_name
+                for prefix in ("Premade_Holiday_", "Holiday_", "PremadeHoliday_"):
+                    if stripped.startswith(prefix):
+                        stripped = stripped[len(prefix):]
+                        break
+                cleaned_cls = _clean_event_name(stripped)
+                if cleaned_cls and cleaned_cls.lower() not in ("custom holiday", "holiday"):
+                    _log(f"holiday_name: hid={hid} -> '{cleaned_cls}' via class.__name__ ({cls_name})")
+                    return cleaned_cls
+        except Exception as e:
+            _log(f"holiday_name: hid={hid} class.__name__ fallback raised: {type(e).__name__}: {e}")
+
         _log(f"holiday_name: hid={hid} fell through; cleaned='{cleaned}', data type={type(data).__name__}")
         return cleaned
     except Exception as e:

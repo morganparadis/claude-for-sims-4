@@ -248,6 +248,29 @@ def get_entry_count():
     return len(_load())
 
 
+def last_entry_timestamp_for_pair(sim_id, recipient_id):
+    """Return the ISO timestamp of the most-recent entry where both
+    sim_id and recipient_id appear (in either direction), or None.
+    Used by the interaction-awareness path to decide whether an
+    in-game interaction is newer than the last conversation between
+    these sims and worth surfacing in the next prompt."""
+    if sim_id is None or recipient_id is None:
+        return None
+    sid, rid = str(sim_id), str(recipient_id)
+    latest = None
+    for e in _load():
+        e_sim = e.get("sim_id")
+        e_rec = e.get("recipient_id")
+        if not e_sim or not e_rec:
+            continue
+        # Symmetric match -- either side of the pair.
+        if (e_sim == sid and e_rec == rid) or (e_sim == rid and e_rec == sid):
+            ts = e.get("timestamp")
+            if ts and (latest is None or ts > latest):
+                latest = ts
+    return latest
+
+
 def get_sim_history(sim_name, n=6, recipient_name=None,
                     sim_id=None, recipient_id=None):
     """

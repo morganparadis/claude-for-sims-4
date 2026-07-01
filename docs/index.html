@@ -47,7 +47,7 @@
     "description": "A free phone-first script mod for The Sims 4 that generates AI-powered phone calls and text messages (bring your own AI -- Claude, OpenAI, Gemini, or local Ollama). Random sims call and text you in character, shaped by their traits, mood, relationships, and what's actually happening in your save.",
     "url": "https://morganparadis.github.io/llamafone/",
     "downloadUrl": "https://github.com/morganparadis/llamafone/releases/latest",
-    "softwareVersion": "3.1.3",
+    "softwareVersion": "3.2.0",
     "image": "https://morganparadis.github.io/llamafone/img/llamafonelogo-square.PNG",
     "author": { "@type": "Person", "name": "morganparadis" },
     "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
@@ -644,6 +644,27 @@ api_key  = </code></pre>
   <p class="muted">Recent changes from the dev branch — the mod's actively maintained.</p>
 
   <ol class="changelog-list">
+
+    <li class="changelog-entry">
+      <div class="changelog-date">June 30, 2026</div>
+      <div class="changelog-body">
+        <h3>Sims notice when you actually hang out (v3.2.0)</h3>
+        <p>Two new context features. Same per-save data layout as v3.1.4, drop-in.</p>
+        <ul>
+          <li><strong>Sims remember when you were just together.</strong> When your active sim actually chats/flirts/argues/kisses another sim in-game, the mod logs the encounter. The next time you text or call that sim, the prompt tells the AI "you saw each other in person recently" — so instead of generic small talk, they open with "great catching up earlier" or "thanks for the chat". Detection uses Sims 4's own short-term relationship bits (Greeted, Social Context, Just Chatted/Kissed/Argued/etc). The tag appears exactly once per burst of in-person contact between phone conversations, so it doesn't get repetitive.</li>
+          <li><strong>Past-event memory for calendar events.</strong> Sims 4 drops calendar events (parties, weddings, funerals, dinners, holidays) from the UI the moment they end. The mod now snapshots them as they complete and surfaces recent shared events in phone prompts for a few in-game days — so the morning after a wedding you attended together, the AI can text about it. Hooks the game's <code>BaseDramaNode</code> completion callback (the same lifecycle point every calendar event class inherits from), so it works for player-planned events, holidays, drama-scheduler events, all in one place.</li>
+          <li><strong>Contact's immediate family always shown as mutuals.</strong> The mutual-contacts block was randomising 4 mutuals per call — meaning a contact's own children/spouse/parents/siblings sometimes weren't in the list, and the AI would say "Who's Luca?" when Luca was their son. Now the contact's family is force-included in the mutuals list before random-fill; total cap raised from 4 to 8 so both family and friends fit. Family relationships (via <code>_get_family_relationship</code>) are checked directly so grandchildren, in-laws, and step-relations all count.</li>
+        </ul>
+      </div>
+    </li>
+
+    <li class="changelog-entry">
+      <div class="changelog-date">June 30, 2026</div>
+      <div class="changelog-body">
+        <h3>Hotfix: per-save folder names now match the .save filename (v3.1.4)</h3>
+        <p>v3.1.2/3 named per-save folders with the slot id formatted as decimal (e.g. <code>Slot_00004373</code>) when Sims 4 actually names the .save files with the slot id in lowercase hex (<code>Slot_00001115.save</code> for the same id — <code>0x1115 == 4373</code>). The folder name didn't match the filename, and on every play session the mod could land on a different decimal value as the player's save state changed. v3.1.4 formats slot ids as hex to match the .save filename exactly. On first load after upgrading, the mod auto-renames your old decimal-named folder to the correct hex name so your journal/milestones history carries over. No manual migration needed.</p>
+      </div>
+    </li>
 
     <li class="changelog-entry">
       <div class="changelog-date">June 30, 2026</div>

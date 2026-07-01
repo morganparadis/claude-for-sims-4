@@ -2,8 +2,10 @@
 *.ts4script
 *.package
 
-# Local Claude Code memory
-.claude/
+# Local Claude Code config -- personal, don't share.
+.claude/settings.local.json
+.claude/settings.json
+# .claude/skills/ IS tracked so hard-won debugging patterns propagate.
 
 # Python cache
 __pycache__/
